@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "base64 decoder",
+  "version": "1.1",
+  "description": "base64 decoder.",
+  "permissions": [
+    "contextMenus", 
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"], 
+      "js": ["content.js"]      
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html" 
+  },
+  "commands": {
+    "decode-base64": {
+      "suggested_key": {
+        "default": "Alt+Shift+D"
+      },
+      "description": "parse base64"
+    }
+  }
+}
