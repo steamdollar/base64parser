@@ -22,6 +22,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }).catch(() => {
       showNotification("✗ 복사 실패");
     });
+  } else if (request.action === "show_error") {
+    // 에러 메시지 표시 (복사 없음)
+    showNotification("✗ " + request.text);
   } else if (request.action === "get_selection_and_process") {
     // 선택된 텍스트 가져오기
     const selectedText = window.getSelection().toString().trim();

@@ -126,10 +126,17 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         } else {
           // 일반 텍스트인 경우 디코딩 후 복사
           const decodedText = base64ToUtf8(selectedText);
-          chrome.tabs.sendMessage(tab.id, {
-            action: "copy_to_clipboard",
-            text: decodedText
-          });
+          if (decodedText && !decodedText.startsWith("오류:")) {
+            chrome.tabs.sendMessage(tab.id, {
+              action: "copy_to_clipboard",
+              text: decodedText
+            });
+          } else {
+            chrome.tabs.sendMessage(tab.id, {
+              action: "show_error",
+              text: "디코딩 실패"
+            });
+          }
         }
       }
     });
@@ -165,10 +172,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     } else {
       // 일반 텍스트인 경우 디코딩 후 복사
       const decodedText = base64ToUtf8(selectedText);
-      chrome.tabs.sendMessage(sender.tab.id, {
-        action: "copy_to_clipboard",
-        text: decodedText
-      });
+      if (decodedText && !decodedText.startsWith("오류:")) {
+        chrome.tabs.sendMessage(sender.tab.id, {
+          action: "copy_to_clipboard",
+          text: decodedText
+        });
+      } else {
+        chrome.tabs.sendMessage(sender.tab.id, {
+          action: "show_error",
+          text: "디코딩 실패"
+        });
+      }
     }
   }
 });
