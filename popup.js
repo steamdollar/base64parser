@@ -1,97 +1,23 @@
-// Base64 디코딩 함수
-function base64ToUtf8(base64) {
-  try {
-    const binaryString = atob(base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    const decoder = new TextDecoder('utf-8');
-    return decoder.decode(bytes);
-  } catch (e) {
-    return null;
-  }
-}
-
-// 이미지인지 판별하는 함수
-function isImageBase64(base64String) {
-  if (base64String.startsWith('data:image/')) {
-    return { isImage: true, dataUrl: base64String };
-  }
-  
-  try {
-    const binaryString = atob(base64String);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < Math.min(binaryString.length, 12); i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    
-    if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
-      return { isImage: true, dataUrl: `data:image/png;base64,${base64String}` };
-    }
-    
-    if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
-      return { isImage: true, dataUrl: `data:image/jpeg;base64,${base64String}` };
-    }
-    
-    if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
-      return { isImage: true, dataUrl: `data:image/gif;base64,${base64String}` };
-    }
-    
-    if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
-        bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
-      return { isImage: true, dataUrl: `data:image/webp;base64,${base64String}` };
-    }
-  } catch (e) {
-    // 디코딩 실패
-  }
-  
-  return { isImage: false };
-}
-
-// 이미지를 새 탭에서 여는 함수
-function openImageInNewTab(dataUrl) {
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>Base64 Image</title>
-      <style>
-        body {
-          margin: 0;
-          padding: 20px;
-          background: #2b2b2b;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          min-height: 100vh;
-        }
-        img {
-          max-width: 100%;
-          max-height: 100vh;
-          object-fit: contain;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-        }
-      </style>
-    </head>
-    <body>
-      <img src="${dataUrl}" alt="Decoded Image">
-    </body>
-    </html>
-  `;
-  
-  const blob = new Blob([html], { type: 'text/html' });
-  const blobUrl = URL.createObjectURL(blob);
-  chrome.tabs.create({ url: blobUrl });
-}
+// 모듈 import
+import { base64ToUtf8, utf8ToBase64, isImageBase64 } from './modules/base64/index.js';
+import { sendHttpRequest } from './modules/http/index.js';
+import { openImageInNewTab, showResult, switchTab } from './modules/base64/ui.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+  // DOM 요소들 가져오기
   const toggleSwitch = document.getElementById('toggleSwitch');
   const statusText = document.getElementById('statusText');
   const base64Input = document.getElementById('base64Input');
   const decodeButton = document.getElementById('decodeButton');
+  const encodeButton = document.getElementById('encodeButton');
+  const requestMethod = document.getElementById('requestMethod');
+  const requestUrl = document.getElementById('requestUrl');
+  const requestHeaders = document.getElementById('requestHeaders');
+  const requestBody = document.getElementById('requestBody');
+  const sendRequestButton = document.getElementById('sendRequestButton');
   const resultDiv = document.getElementById('result');
+  const tabButtons = document.querySelectorAll('.tab-button');
+  const tabPanels = document.querySelectorAll('.tab-panel');
 
   // 토글 스위치 초기화
   chrome.storage.sync.get(['isEnabled'], (result) => {
@@ -107,13 +33,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // 탭 전환 기능
+  tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const targetTab = button.getAttribute('data-tab');
+      switchTab(targetTab, tabButtons, tabPanels);
+    });
+  });
+
   // 디코딩 버튼 클릭
   decodeButton.addEventListener('click', () => {
     const inputText = base64Input.value.trim();
     
     if (!inputText) {
-      resultDiv.textContent = '⚠️ Base64 텍스트를 입력해주세요.';
-      resultDiv.className = 'show';
+      showResult(resultDiv, '⚠️ Base64 텍스트를 입력해주세요.');
       return;
     }
     
@@ -122,18 +55,90 @@ document.addEventListener('DOMContentLoaded', () => {
     if (imageCheck.isImage) {
       // 이미지인 경우 새 탭에서 열기
       openImageInNewTab(imageCheck.dataUrl);
-      resultDiv.textContent = '✓ 이미지를 새 탭에서 열었습니다!';
-      resultDiv.className = 'show';
+      showResult(resultDiv, '✓ 이미지를 새 탭에서 열었습니다!');
     } else {
       // 일반 텍스트 디코딩
       const decodedText = base64ToUtf8(inputText);
       if (decodedText) {
-        resultDiv.innerHTML = `<strong>디코딩 결과:</strong><div class="result-text">${decodedText}</div>`;
-        resultDiv.className = 'show';
+        showResult(resultDiv, `<strong>디코딩 결과:</strong><div class="result-text">${decodedText}</div>`, true);
       } else {
-        resultDiv.textContent = '✗ 디코딩에 실패했습니다. 올바른 Base64 형식이 아닙니다.';
-        resultDiv.className = 'show';
+        showResult(resultDiv, '✗ 디코딩에 실패했습니다. 올바른 Base64 형식이 아닙니다.');
       }
+    }
+  });
+
+  // 인코딩 버튼 클릭
+  encodeButton.addEventListener('click', () => {
+    const inputText = base64Input.value.trim();
+    
+    if (!inputText) {
+      showResult(resultDiv, '⚠️ 인코딩할 텍스트를 입력해주세요.');
+      return;
+    }
+    
+    const encodedText = utf8ToBase64(inputText);
+    if (encodedText) {
+      showResult(resultDiv, `<strong>인코딩 결과:</strong><div class="result-text">${encodedText}</div>`, true);
+    } else {
+      showResult(resultDiv, '✗ 인코딩에 실패했습니다.');
+    }
+  });
+
+  // HTTP 요청 버튼 클릭
+  sendRequestButton.addEventListener('click', async () => {
+    const url = requestUrl.value.trim();
+    const method = requestMethod.value;
+    const headersText = requestHeaders.value.trim();
+    const bodyText = requestBody.value.trim();
+    
+    if (!url) {
+      showResult(resultDiv, '⚠️ URL을 입력해주세요.');
+      return;
+    }
+    
+    let headers = {};
+    if (headersText) {
+      try {
+        headers = JSON.parse(headersText);
+      } catch (e) {
+        showResult(resultDiv, '✗ 헤더 JSON 형식이 올바르지 않습니다.');
+        return;
+      }
+    }
+    
+    let body = null;
+    if (bodyText && method !== 'GET') {
+      try {
+        JSON.parse(bodyText); // JSON 유효성 검사
+        body = bodyText;
+      } catch (e) {
+        showResult(resultDiv, '✗ 요청 본문 JSON 형식이 올바르지 않습니다.');
+        return;
+      }
+    }
+    
+    sendRequestButton.textContent = '요청 중...';
+    sendRequestButton.disabled = true;
+    
+    const result = await sendHttpRequest(url, method, headers, body);
+    
+    sendRequestButton.textContent = '요청 보내기';
+    sendRequestButton.disabled = false;
+    
+    if (result.success) {
+      const responseHtml = `
+        <strong>응답 결과:</strong>
+        <div class="result-text">
+          <strong>상태:</strong> ${result.status} ${result.statusText}
+          <br><strong>헤더:</strong>
+          <pre>${JSON.stringify(result.headers, null, 2)}</pre>
+          <br><strong>본문:</strong>
+          <pre>${result.body}</pre>
+        </div>
+      `;
+      showResult(resultDiv, responseHtml, true);
+    } else {
+      showResult(resultDiv, `✗ 요청 실패: ${result.error}`);
     }
   });
   
