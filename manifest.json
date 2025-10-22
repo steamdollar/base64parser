@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "base64 decoder",
-  "version": "1.1",
-  "description": "base64 decoder.",
+  "name": "Context Decoder",
+  "version": "1.2",
+  "description": "A powerful toolkit for Base64 encoding/decoding and HTTP API requests.",
   "permissions": [
     "contextMenus", 
     "storage",
@@ -35,7 +35,7 @@
       "suggested_key": {
         "default": "Alt+Shift+D"
       },
-      "description": "parse base64"
+      "description": "Decode Base64"
     }
   }
 }

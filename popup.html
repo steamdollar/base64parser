@@ -115,6 +115,73 @@
       border-radius: 4px;
       background-color: white;
     }
+    .settings-section {
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #eee;
+    }
+    .settings-section h4 {
+      margin: 0 0 15px 0;
+      color: #333;
+      font-size: 14px;
+    }
+    .settings-section:last-of-type {
+      border-bottom: none;
+    }
+    .token-input-row {
+      display: flex;
+      align-items: center;
+    }
+    .saved-tokens {
+      margin-top: 15px;
+    }
+    .token-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px;
+      margin: 5px 0;
+      background-color: #f9f9f9;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .token-item button {
+      padding: 4px 8px;
+      font-size: 11px;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      margin-left: 5px;
+    }
+    .token-item .use-token-btn {
+      background-color: #2196F3;
+      color: white;
+    }
+    .token-item .use-token-btn:hover {
+      background-color: #1976D2;
+    }
+    .token-item .set-default-token-btn {
+      background-color: #4CAF50;
+      color: white;
+    }
+    .token-item .set-default-token-btn:hover {
+      background-color: #45a049;
+    }
+    .token-item .delete-token-btn {
+      background-color: #ff4444;
+      color: white;
+    }
+    .token-item .delete-token-btn:hover {
+      background-color: #cc0000;
+    }
+    .settings-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .settings-actions button {
+      flex: 1;
+    }
     #result {
       margin-top: 15px;
       padding: 10px;
@@ -136,33 +203,34 @@
   </style>
 </head>
 <body>
-  <h3>컨텍스트 디코더</h3>
+  <h3>Context Decoder</h3>
   
   <div class="toggle-section">
-    <span>기능</span>
+    <span>Feature</span>
     <label class="switch">
       <input type="checkbox" id="toggleSwitch">
       <span class="slider"></span>
     </label>
-    <span id="statusText">꺼짐</span>
+    <span id="statusText">Off</span>
   </div>
   
   <div class="tab-container">
     <div class="tab-buttons">
       <button class="tab-button active" data-tab="base64">Base64</button>
       <button class="tab-button" data-tab="fetch">Fetch</button>
+      <button class="tab-button" data-tab="settings">Settings</button>
     </div>
     
     <div class="tab-content">
       <div id="base64-tab" class="tab-panel active">
         <div class="input-section">
-          <label for="base64Input">텍스트 입력:</label>
-          <textarea id="base64Input" placeholder="Base64 텍스트 또는 일반 텍스트를 여기에 입력하세요..."></textarea>
+          <label for="base64Input">Text Input:</label>
+          <textarea id="base64Input" placeholder="Enter Base64 text or regular text here..."></textarea>
         </div>
         
         <div class="button-row">
-          <button id="decodeButton">디코딩</button>
-          <button id="encodeButton">인코딩</button>
+          <button id="decodeButton">Decode</button>
+          <button id="encodeButton">Encode</button>
         </div>
       </div>
       
@@ -178,14 +246,63 @@
           <input type="url" id="requestUrl" placeholder="https://api.example.com/endpoint" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
         </div>
         <div class="input-section">
-          <label for="requestHeaders">헤더 (JSON):</label>
+          <label for="requestHeaders">Headers (JSON):</label>
           <textarea id="requestHeaders" placeholder='{"Authorization": "Bearer token", "Content-Type": "application/json"}'></textarea>
         </div>
         <div class="input-section">
-          <label for="requestBody">요청 본문 (JSON):</label>
+          <label for="requestBody">Request Body (JSON):</label>
           <textarea id="requestBody" placeholder='{"key": "value"}'></textarea>
         </div>
-        <button id="sendRequestButton">요청 보내기</button>
+        <button id="sendRequestButton">Send Request</button>
+      </div>
+      
+      <div id="settings-tab" class="tab-panel">
+        <div class="settings-section">
+          <h4>Default Settings</h4>
+          <div class="input-section">
+            <label for="defaultUrl">Default URL:</label>
+            <input type="url" id="defaultUrl" placeholder="https://api.example.com" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+          </div>
+          <div class="input-section">
+            <label for="defaultMethod">Default Method:</label>
+            <select id="defaultMethod" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+              <option value="GET">GET</option>
+              <option value="POST">POST</option>
+              <option value="PUT">PUT</option>
+              <option value="DELETE">DELETE</option>
+              <option value="PATCH">PATCH</option>
+            </select>
+          </div>
+          <div class="input-section">
+            <label for="defaultHeaders">Default Headers (JSON):</label>
+            <textarea id="defaultHeaders" placeholder='{"Content-Type": "application/json"}'></textarea>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h4>Token Management</h4>
+          <div class="input-section">
+            <label for="accessToken">Access Token:</label>
+            <div class="token-input-row">
+              <input type="password" id="accessToken" placeholder="Bearer token or API key" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+              <button id="toggleTokenVisibility" style="padding: 8px 12px; margin-left: 5px;">👁️</button>
+            </div>
+          </div>
+          <div class="input-section">
+            <label for="tokenName">Token Name:</label>
+            <input type="text" id="tokenName" placeholder="e.g., GitHub API, OpenAI API" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+          </div>
+          <button id="saveTokenButton">Save Token</button>
+          <div class="saved-tokens">
+            <label>Saved Tokens:</label>
+            <div id="savedTokensList"></div>
+          </div>
+        </div>
+        
+        <div class="settings-actions">
+          <button id="saveSettingsButton">Save Settings</button>
+          <button id="resetSettingsButton">Reset Settings</button>
+        </div>
       </div>
     </div>
   </div>
