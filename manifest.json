@@ -12,7 +12,8 @@
     "<all_urls>"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
@@ -36,6 +37,12 @@
         "default": "Alt+Shift+D"
       },
       "description": "Decode Base64"
+    },
+    "show-mermaid": {
+      "suggested_key": {
+        "default": "Alt+Q"
+      },
+      "description": "Show Mermaid Chart Overlay"
     }
   }
 }

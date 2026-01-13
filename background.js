@@ -1,59 +1,6 @@
-// 디코딩 함수
-function base64ToUtf8(base64) {
-  try {
-    const binaryString = atob(base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    const decoder = new TextDecoder('utf-8');
-    return decoder.decode(bytes);
-  } catch (e) {
-    return "오류: 디코딩에 실패했습니다.";
-  }
-}
-
-// 이미지인지 판별하는 함수
-function isImageBase64(base64String) {
-  // 1. data:image로 시작하는지 체크
-  if (base64String.startsWith('data:image/')) {
-    return { isImage: true, dataUrl: base64String };
-  }
-  
-  // 2. 순수 Base64인 경우 바이트 시그니처 체크
-  try {
-    const binaryString = atob(base64String);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < Math.min(binaryString.length, 12); i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    
-    // PNG: 89 50 4E 47
-    if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
-      return { isImage: true, dataUrl: `data:image/png;base64,${base64String}` };
-    }
-    
-    // JPEG: FF D8 FF
-    if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
-      return { isImage: true, dataUrl: `data:image/jpeg;base64,${base64String}` };
-    }
-    
-    // GIF: 47 49 46 38 (GIF8)
-    if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
-      return { isImage: true, dataUrl: `data:image/gif;base64,${base64String}` };
-    }
-    
-    // WebP: 52 49 46 46 ... 57 45 42 50 (RIFF...WEBP)
-    if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
-        bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
-      return { isImage: true, dataUrl: `data:image/webp;base64,${base64String}` };
-    }
-  } catch (e) {
-    // 디코딩 실패하면 이미지가 아님
-  }
-  
-  return { isImage: false };
-}
+// 모듈 import
+import { decodeText, isImageBase64 } from './modules/base64/index.js';
+import { isMermaidCode, renderMermaidChart } from './modules/mermaid/index.js';
 
 // 이미지를 새 탭에서 여는 함수
 function openImageInNewTab(dataUrl) {
@@ -125,7 +72,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
           openImageInNewTab(imageCheck.dataUrl);
         } else {
           // 일반 텍스트인 경우 디코딩 후 복사
-          const decodedText = base64ToUtf8(selectedText);
+          const decodedText = decodeText(selectedText);
           if (decodedText && !decodedText.startsWith("오류:")) {
             chrome.tabs.sendMessage(tab.id, {
               action: "copy_to_clipboard",
@@ -157,6 +104,18 @@ chrome.commands.onCommand.addListener((command) => {
         });
       }
     });
+  } else if (command === "show-mermaid") {
+    chrome.storage.sync.get(['isEnabled'], (result) => {
+      if (result.isEnabled) {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs[0]) {
+            chrome.tabs.sendMessage(tabs[0].id, {
+              action: "get_selection_for_mermaid"
+            });
+          }
+        });
+      }
+    });
   }
 });
 
@@ -171,7 +130,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       openImageInNewTab(imageCheck.dataUrl);
     } else {
       // 일반 텍스트인 경우 디코딩 후 복사
-      const decodedText = base64ToUtf8(selectedText);
+      const decodedText = decodeText(selectedText);
       if (decodedText && !decodedText.startsWith("오류:")) {
         chrome.tabs.sendMessage(sender.tab.id, {
           action: "copy_to_clipboard",
@@ -183,6 +142,31 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           text: "디코딩 실패"
         });
       }
+    }
+  } else if (request.action === "process_mermaid") {
+    const selectedText = request.text;
+
+    // Mermaid 코드인지 확인
+    if (isMermaidCode(selectedText)) {
+      // Mermaid 차트 렌더링 후 오버레이 표시
+      renderMermaidChart(selectedText).then(result => {
+        if (result.success) {
+          chrome.tabs.sendMessage(sender.tab.id, {
+            action: "showMermaidOverlay",
+            imageUrl: result.imageUrl
+          });
+        } else {
+          chrome.tabs.sendMessage(sender.tab.id, {
+            action: "show_error",
+            text: "Mermaid 렌더링 실패"
+          });
+        }
+      });
+    } else {
+      chrome.tabs.sendMessage(sender.tab.id, {
+        action: "show_error",
+        text: "Mermaid 코드가 아닙니다"
+      });
     }
   }
 });

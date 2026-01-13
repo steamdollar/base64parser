@@ -78,12 +78,12 @@
     }
     .tab-button {
       flex: 1;
-      padding: 10px 15px;
+      padding: 10px 10px;
       background-color: #f5f5f5;
       border: none;
       border-bottom: 2px solid transparent;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: bold;
       color: #666;
     }
@@ -218,6 +218,8 @@
     <div class="tab-buttons">
       <button class="tab-button active" data-tab="base64">Base64</button>
       <button class="tab-button" data-tab="fetch">Fetch</button>
+      <button class="tab-button" data-tab="mermaid">Mermaid</button>
+      <button class="tab-button" data-tab="memo">Memo</button>
       <button class="tab-button" data-tab="settings">Settings</button>
     </div>
     
@@ -254,6 +256,53 @@
           <textarea id="requestBody" placeholder='{"key": "value"}'></textarea>
         </div>
         <button id="sendRequestButton">Send Request</button>
+      </div>
+      
+      <div id="mermaid-tab" class="tab-panel">
+        <div class="input-section">
+          <label for="mermaidCode">Mermaid 차트 코드:</label>
+          <textarea id="mermaidCode" placeholder="graph TD&#10;    A[시작] --> B{조건}&#10;    B -->|예| C[처리]&#10;    B -->|아니오| D[종료]" style="height: 120px; font-family: 'Courier New', monospace;"></textarea>
+        </div>
+        <div class="button-row">
+          <button id="renderMermaidButton">🎨 렌더링</button>
+          <button id="showOverlayButton">📊 오버레이 표시</button>
+        </div>
+        <div class="button-row" style="margin-top: 5px;">
+          <select id="mermaidExamples" style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+            <option value="">예제 선택...</option>
+            <option value="flowchart">플로우차트</option>
+            <option value="sequence">시퀀스 다이어그램</option>
+            <option value="gantt">간트 차트</option>
+            <option value="classDiagram">클래스 다이어그램</option>
+          </select>
+        </div>
+        <div id="mermaidPreview" style="margin-top: 15px; display: none; text-align: center;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <label style="font-weight: bold; margin: 0;">미리보기:</label>
+            <button id="clearMermaidPreview" style="padding: 4px 12px; background-color: #ff6b6b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">✕ 지우기</button>
+          </div>
+          <img id="mermaidImage" style="max-width: 100%; border: 1px solid #ddd; border-radius: 4px; background: white;" />
+        </div>
+        <div id="mermaidStatus" style="margin-top: 10px; font-size: 12px; color: #666; text-align: center;"></div>
+      </div>
+
+      <div id="memo-tab" class="tab-panel">
+        <div class="input-section">
+          <label for="memoTitle">Title:</label>
+          <input type="text" id="memoTitle" placeholder="Enter memo title (key)" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+        </div>
+        <div class="input-section">
+          <label for="memoContent">Content:</label>
+          <textarea id="memoContent" placeholder="Enter memo content (value)" style="height: 80px;"></textarea>
+        </div>
+        <div class="button-row">
+          <button id="saveMemoButton">💾 Save</button>
+        </div>
+        <div class="saved-tokens" style="margin-top: 15px;">
+          <label>Saved Memos:</label>
+          <div id="savedMemosList" style="max-height: 150px; overflow-y: auto;"></div>
+        </div>
+        <div id="memoStatus" style="margin-top: 10px; font-size: 12px; color: #666; text-align: center;"></div>
       </div>
       
       <div id="settings-tab" class="tab-panel">

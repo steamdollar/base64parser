@@ -1,3 +1,13 @@
+// Base64URL을 Base64로 변환하는 함수
+function base64URLToBase64(base64URL) {
+  let base64 = base64URL.replace(/-/g, '+').replace(/_/g, '/');
+  // 패딩 추가
+  while (base64.length % 4 !== 0) {
+    base64 += '=';
+  }
+  return base64;
+}
+
 // Base64 디코딩 함수
 export function base64ToUtf8(base64) {
   try {
@@ -11,6 +21,53 @@ export function base64ToUtf8(base64) {
   } catch (e) {
     return null;
   }
+}
+
+// JWT 토큰인지 확인하고 디코딩하는 함수
+function decodeJWT(token) {
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    return null;
+  }
+  
+  try {
+    // Base64URL을 Base64로 변환 후 디코딩
+    const header = base64ToUtf8(base64URLToBase64(parts[0]));
+    const payload = base64ToUtf8(base64URLToBase64(parts[1]));
+    
+    if (!header || !payload) {
+      return null;
+    }
+    
+    // JSON 파싱 확인
+    JSON.parse(header);
+    JSON.parse(payload);
+    
+    return JSON.stringify({
+      header: JSON.parse(header),
+      payload: JSON.parse(payload),
+      signature: parts[2]
+    }, null, 2);
+  } catch (e) {
+    return null;
+  }
+}
+
+// 텍스트 디코딩 (JWT 자동 감지)
+export function decodeText(text) {
+  // 1. JWT 토큰인지 확인
+  const jwtResult = decodeJWT(text);
+  if (jwtResult) {
+    return jwtResult;
+  }
+  
+  // 2. 일반 Base64 디코딩
+  const base64Result = base64ToUtf8(text);
+  if (base64Result) {
+    return base64Result;
+  }
+  
+  return "오류: 디코딩에 실패했습니다.";
 }
 
 // Base64 인코딩 함수

@@ -1,8 +1,9 @@
 // 모듈 import
-import { base64ToUtf8, utf8ToBase64, isImageBase64 } from './modules/base64/index.js';
+import { base64ToUtf8, utf8ToBase64, isImageBase64, decodeText } from './modules/base64/index.js';
 import { sendHttpRequest } from './modules/http/index.js';
 import { openImageInNewTab, showResult, switchTab } from './modules/base64/ui.js';
 import { SettingsManager } from './modules/settings.js';
+import { renderMermaidChart, showMermaidOverlay, MERMAID_EXAMPLES } from './modules/mermaid/index.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // 설정 관리자 초기화
@@ -34,6 +35,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const savedTokensList = document.getElementById('savedTokensList');
   const saveSettingsButton = document.getElementById('saveSettingsButton');
   const resetSettingsButton = document.getElementById('resetSettingsButton');
+  
+  // 메모 관련 DOM 요소들
+  const memoTitle = document.getElementById('memoTitle');
+  const memoContent = document.getElementById('memoContent');
+  const saveMemoButton = document.getElementById('saveMemoButton');
+  const savedMemosList = document.getElementById('savedMemosList');
+  const memoStatus = document.getElementById('memoStatus');
+
+  // 머메이드 관련 DOM 요소들
+  const mermaidCode = document.getElementById('mermaidCode');
+  const renderMermaidButton = document.getElementById('renderMermaidButton');
+  const showOverlayButton = document.getElementById('showOverlayButton');
+  const mermaidExamples = document.getElementById('mermaidExamples');
+  const mermaidPreview = document.getElementById('mermaidPreview');
+  const mermaidImage = document.getElementById('mermaidImage');
+  const mermaidStatus = document.getElementById('mermaidStatus');
+  const clearMermaidPreview = document.getElementById('clearMermaidPreview');
 
   // 설정 로드 및 초기화
   async function loadSettings() {
@@ -171,11 +189,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // 설정 로드 실행
   loadSettings();
 
+  // 마지막 사용 탭 복원
+  chrome.storage.local.get(['lastActiveTab'], (result) => {
+    const lastTab = result.lastActiveTab || 'base64';
+    switchTab(lastTab, tabButtons, tabPanels);
+  });
+
   // 탭 전환 기능
   tabButtons.forEach(button => {
     button.addEventListener('click', () => {
       const targetTab = button.getAttribute('data-tab');
       switchTab(targetTab, tabButtons, tabPanels);
+      // 마지막 사용 탭 저장
+      chrome.storage.local.set({ lastActiveTab: targetTab });
     });
   });
 
@@ -195,9 +221,9 @@ document.addEventListener('DOMContentLoaded', () => {
       openImageInNewTab(imageCheck.dataUrl);
       showResult(resultDiv, '✓ Image opened in new tab!');
     } else {
-      // 일반 텍스트 디코딩
-      const decodedText = base64ToUtf8(inputText);
-      if (decodedText) {
+      // 일반 텍스트 디코딩 (JWT 자동 감지)
+      const decodedText = decodeText(inputText);
+      if (decodedText && !decodedText.startsWith("오류:")) {
         showResult(resultDiv, `<strong>Decoded Result:</strong><div class="result-text">${decodedText}</div>`, true);
       } else {
         showResult(resultDiv, '✗ Decoding failed. Invalid Base64 format.');
@@ -346,5 +372,208 @@ document.addEventListener('DOMContentLoaded', () => {
         showResult(resultDiv, '✗ Failed to reset settings.');
       }
     }
+  });
+  
+  // 메모 기능 (K-V 형태)
+  
+  // 저장된 메모 리스트 로드
+  async function loadSavedMemos() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(['savedMemos'], (result) => {
+        const memos = result.savedMemos || {};
+        savedMemosList.innerHTML = '';
+        
+        const memoKeys = Object.keys(memos);
+        if (memoKeys.length === 0) {
+          savedMemosList.innerHTML = '<div style="color: #999; font-size: 12px; padding: 8px;">No saved memos</div>';
+          resolve();
+          return;
+        }
+        
+        for (const title of memoKeys) {
+          const memoItem = document.createElement('div');
+          memoItem.className = 'token-item';
+          memoItem.innerHTML = `
+            <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${memos[title]}">${title}</span>
+            <div style="display: flex; gap: 3px;">
+              <button class="copy-memo-btn use-token-btn" data-title="${title}">📋 Copy</button>
+              <button class="delete-memo-btn delete-token-btn" data-title="${title}">🗑️</button>
+            </div>
+          `;
+          savedMemosList.appendChild(memoItem);
+        }
+        resolve();
+      });
+    });
+  }
+  
+  // 메모 저장
+  saveMemoButton.addEventListener('click', () => {
+    const title = memoTitle.value.trim();
+    const content = memoContent.value.trim();
+    
+    if (!title || !content) {
+      memoStatus.textContent = '⚠️ Please enter both title and content';
+      memoStatus.style.color = '#ff6b6b';
+      setTimeout(() => { memoStatus.style.color = '#666'; memoStatus.textContent = ''; }, 2000);
+      return;
+    }
+    
+    chrome.storage.local.get(['savedMemos'], (result) => {
+      const memos = result.savedMemos || {};
+      memos[title] = content;
+      chrome.storage.local.set({ savedMemos: memos }, () => {
+        memoStatus.textContent = `✓ "${title}" saved`;
+        memoStatus.style.color = '#4CAF50';
+        memoTitle.value = '';
+        memoContent.value = '';
+        loadSavedMemos();
+        setTimeout(() => { memoStatus.style.color = '#666'; memoStatus.textContent = ''; }, 2000);
+      });
+    });
+  });
+  
+  // 메모 리스트 이벤트 위임 (복사/삭제)
+  savedMemosList.addEventListener('click', (e) => {
+    const title = e.target.getAttribute('data-title');
+    if (!title) return;
+    
+    if (e.target.classList.contains('copy-memo-btn')) {
+      chrome.storage.local.get(['savedMemos'], (result) => {
+        const memos = result.savedMemos || {};
+        const content = memos[title];
+        if (content) {
+          navigator.clipboard.writeText(content).then(() => {
+            memoStatus.textContent = `✓ "${title}" copied to clipboard`;
+            memoStatus.style.color = '#4CAF50';
+            setTimeout(() => { memoStatus.style.color = '#666'; memoStatus.textContent = ''; }, 2000);
+          });
+        }
+      });
+    } else if (e.target.classList.contains('delete-memo-btn')) {
+      if (confirm(`Delete "${title}"?`)) {
+        chrome.storage.local.get(['savedMemos'], (result) => {
+          const memos = result.savedMemos || {};
+          delete memos[title];
+          chrome.storage.local.set({ savedMemos: memos }, () => {
+            memoStatus.textContent = `✓ "${title}" deleted`;
+            memoStatus.style.color = '#ff6b6b';
+            loadSavedMemos();
+            setTimeout(() => { memoStatus.style.color = '#666'; memoStatus.textContent = ''; }, 2000);
+          });
+        });
+      }
+    }
+  });
+  
+  // 자동 저장 (Ctrl+S)
+  memoContent.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 's') {
+      e.preventDefault();
+      saveMemoButton.click();
+    }
+  });
+  
+  // 초기 메모 로드
+  loadSavedMemos();
+
+  // ===== 머메이드 차트 기능 =====
+
+  // 머메이드 예제 선택
+  mermaidExamples.addEventListener('change', () => {
+    const selectedExample = mermaidExamples.value;
+    if (selectedExample && MERMAID_EXAMPLES[selectedExample]) {
+      mermaidCode.value = MERMAID_EXAMPLES[selectedExample];
+      mermaidPreview.style.display = 'none';
+    }
+  });
+
+  // 머메이드 차트 렌더링
+  renderMermaidButton.addEventListener('click', async () => {
+    const code = mermaidCode.value.trim();
+
+    if (!code) {
+      mermaidStatus.textContent = '⚠️ Mermaid 코드를 입력해주세요.';
+      mermaidStatus.style.color = '#ff6b6b';
+      setTimeout(() => { mermaidStatus.style.color = '#666'; mermaidStatus.textContent = ''; }, 2000);
+      return;
+    }
+
+    renderMermaidButton.textContent = '렌더링 중...';
+    renderMermaidButton.disabled = true;
+
+    const result = await renderMermaidChart(code);
+
+    renderMermaidButton.textContent = '🎨 렌더링';
+    renderMermaidButton.disabled = false;
+
+    if (result.success) {
+      mermaidImage.src = result.imageUrl;
+      mermaidPreview.style.display = 'block';
+      mermaidStatus.textContent = '✓ 차트가 생성되었습니다.';
+      mermaidStatus.style.color = '#4CAF50';
+      setTimeout(() => { mermaidStatus.style.color = '#666'; mermaidStatus.textContent = ''; }, 2000);
+    } else {
+      mermaidStatus.textContent = `✗ ${result.error}`;
+      mermaidStatus.style.color = '#ff6b6b';
+      setTimeout(() => { mermaidStatus.style.color = '#666'; mermaidStatus.textContent = ''; }, 3000);
+    }
+  });
+
+  // 오버레이로 표시
+  showOverlayButton.addEventListener('click', async () => {
+    const code = mermaidCode.value.trim();
+
+    if (!code) {
+      mermaidStatus.textContent = '⚠️ Mermaid 코드를 입력해주세요.';
+      mermaidStatus.style.color = '#ff6b6b';
+      setTimeout(() => { mermaidStatus.style.color = '#666'; mermaidStatus.textContent = ''; }, 2000);
+      return;
+    }
+
+    showOverlayButton.textContent = '표시 중...';
+    showOverlayButton.disabled = true;
+
+    // 먼저 차트 렌더링
+    const renderResult = await renderMermaidChart(code);
+
+    if (!renderResult.success) {
+      showOverlayButton.textContent = '📊 오버레이 표시';
+      showOverlayButton.disabled = false;
+      mermaidStatus.textContent = `✗ ${renderResult.error}`;
+      mermaidStatus.style.color = '#ff6b6b';
+      setTimeout(() => { mermaidStatus.style.color = '#666'; mermaidStatus.textContent = ''; }, 3000);
+      return;
+    }
+
+    // 오버레이 표시
+    const overlayResult = await showMermaidOverlay(renderResult.imageUrl);
+
+    showOverlayButton.textContent = '📊 오버레이 표시';
+    showOverlayButton.disabled = false;
+
+    if (overlayResult.success) {
+      mermaidStatus.textContent = '✓ 오버레이가 표시되었습니다.';
+      mermaidStatus.style.color = '#4CAF50';
+      setTimeout(() => { mermaidStatus.style.color = '#666'; mermaidStatus.textContent = ''; }, 2000);
+    } else {
+      mermaidStatus.textContent = `✗ ${overlayResult.error}`;
+      mermaidStatus.style.color = '#ff6b6b';
+      setTimeout(() => { mermaidStatus.style.color = '#666'; mermaidStatus.textContent = ''; }, 3000);
+    }
+  });
+
+  // Ctrl+Enter로 렌더링
+  mermaidCode.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'Enter') {
+      e.preventDefault();
+      renderMermaidButton.click();
+    }
+  });
+
+  // 미리보기 이미지 지우기
+  clearMermaidPreview.addEventListener('click', () => {
+    mermaidPreview.style.display = 'none';
+    mermaidImage.src = '';
   });
 });
