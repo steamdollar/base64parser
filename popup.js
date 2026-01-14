@@ -488,7 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 머메이드 차트 렌더링
+  // 머메이드 차트 렌더링 (popup에서는 미리보기 비활성화)
   renderMermaidButton.addEventListener('click', async () => {
     const code = mermaidCode.value.trim();
 
@@ -499,25 +499,9 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    renderMermaidButton.textContent = '렌더링 중...';
-    renderMermaidButton.disabled = true;
-
-    const result = await renderMermaidChart(code);
-
-    renderMermaidButton.textContent = '🎨 렌더링';
-    renderMermaidButton.disabled = false;
-
-    if (result.success) {
-      mermaidImage.src = result.imageUrl;
-      mermaidPreview.style.display = 'block';
-      mermaidStatus.textContent = '✓ 차트가 생성되었습니다.';
-      mermaidStatus.style.color = '#4CAF50';
-      setTimeout(() => { mermaidStatus.style.color = '#666'; mermaidStatus.textContent = ''; }, 2000);
-    } else {
-      mermaidStatus.textContent = `✗ ${result.error}`;
-      mermaidStatus.style.color = '#ff6b6b';
-      setTimeout(() => { mermaidStatus.style.color = '#666'; mermaidStatus.textContent = ''; }, 3000);
-    }
+    mermaidStatus.textContent = '✓ 코드가 확인되었습니다. 오버레이 버튼을 눌러주세요.';
+    mermaidStatus.style.color = '#4CAF50';
+    setTimeout(() => { mermaidStatus.style.color = '#666'; mermaidStatus.textContent = ''; }, 2000);
   });
 
   // 오버레이로 표시
@@ -534,29 +518,29 @@ document.addEventListener('DOMContentLoaded', () => {
     showOverlayButton.textContent = '표시 중...';
     showOverlayButton.disabled = true;
 
-    // 먼저 차트 렌더링
-    const renderResult = await renderMermaidChart(code);
+    try {
+      // 현재 활성 탭에 메시지 전송
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
-    if (!renderResult.success) {
-      showOverlayButton.textContent = '📊 오버레이 표시';
-      showOverlayButton.disabled = false;
-      mermaidStatus.textContent = `✗ ${renderResult.error}`;
+      if (tab && tab.id) {
+        await chrome.tabs.sendMessage(tab.id, {
+          action: 'showMermaidOverlay',
+          mermaidCode: code
+        });
+
+        mermaidStatus.textContent = '✓ 오버레이가 표시되었습니다.';
+        mermaidStatus.style.color = '#4CAF50';
+        setTimeout(() => { mermaidStatus.style.color = '#666'; mermaidStatus.textContent = ''; }, 2000);
+      }
+    } catch (error) {
+      mermaidStatus.textContent = '✗ 페이지를 새로고침한 후 다시 시도해주세요.';
       mermaidStatus.style.color = '#ff6b6b';
       setTimeout(() => { mermaidStatus.style.color = '#666'; mermaidStatus.textContent = ''; }, 3000);
-      return;
     }
-
-    // 오버레이 표시
-    const overlayResult = await showMermaidOverlay(renderResult.imageUrl);
 
     showOverlayButton.textContent = '📊 오버레이 표시';
     showOverlayButton.disabled = false;
-
-    if (overlayResult.success) {
-      mermaidStatus.textContent = '✓ 오버레이가 표시되었습니다.';
-      mermaidStatus.style.color = '#4CAF50';
-      setTimeout(() => { mermaidStatus.style.color = '#666'; mermaidStatus.textContent = ''; }, 2000);
-    } else {
+  });
       mermaidStatus.textContent = `✗ ${overlayResult.error}`;
       mermaidStatus.style.color = '#ff6b6b';
       setTimeout(() => { mermaidStatus.style.color = '#666'; mermaidStatus.textContent = ''; }, 3000);

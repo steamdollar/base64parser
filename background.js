@@ -148,19 +148,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     // Mermaid 코드인지 확인
     if (isMermaidCode(selectedText)) {
-      // Mermaid 차트 렌더링 후 오버레이 표시
-      renderMermaidChart(selectedText).then(result => {
-        if (result.success) {
-          chrome.tabs.sendMessage(sender.tab.id, {
-            action: "showMermaidOverlay",
-            imageUrl: result.imageUrl
-          });
-        } else {
-          chrome.tabs.sendMessage(sender.tab.id, {
-            action: "show_error",
-            text: "Mermaid 렌더링 실패"
-          });
-        }
+      // Mermaid 코드를 content script로 전달 (클라이언트 사이드 렌더링)
+      chrome.tabs.sendMessage(sender.tab.id, {
+        action: "showMermaidOverlay",
+        mermaidCode: selectedText
       });
     } else {
       chrome.tabs.sendMessage(sender.tab.id, {

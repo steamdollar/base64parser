@@ -36,8 +36,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       });
     }
   } else if (request.action === "showMermaidOverlay") {
-    // 머메이드 차트 오버레이 표시
-    showMermaidOverlay(request.imageUrl);
+    // 머메이드 차트 오버레이 표시 (클라이언트 사이드 렌더링)
+    showMermaidOverlay(request.mermaidCode);
     sendResponse({ success: true });
     return true; // 비동기 응답을 위해 true 반환
   } else if (request.action === "get_selection_for_mermaid") {
@@ -88,8 +88,8 @@ function showNotification(message) {
   }, 1500);
 }
 
-// 머메이드 차트 오버레이 표시 함수
-function showMermaidOverlay(imageUrl) {
+// 머메이드 차트 오버레이 표시 함수 (클라이언트 사이드 렌더링)
+async function showMermaidOverlay(mermaidCode) {
   // 기존 오버레이 제거
   const oldOverlay = document.getElementById('mermaid-chart-overlay');
   if (oldOverlay) {
@@ -118,13 +118,13 @@ function showMermaidOverlay(imageUrl) {
   const chartContainer = document.createElement('div');
   Object.assign(chartContainer.style, {
     position: 'relative',
-    maxWidth: '98vw',
-    maxHeight: '98vh',
-    width: 'auto',
-    height: 'auto',
+    maxWidth: '95vw',
+    maxHeight: '95vh',
+    minWidth: '750px',
+    minHeight: '480px',
     backgroundColor: 'white',
     borderRadius: '12px',
-    padding: '70px 40px 40px 40px', // 상단 패딩 증가 (버튼 공간)
+    padding: '70px 40px 40px 40px',
     boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
     overflow: 'auto',
     fontFamily: 'Arial, sans-serif',
@@ -132,19 +132,45 @@ function showMermaidOverlay(imageUrl) {
     fontWeight: 'bold'
   });
 
-  // 차트 이미지 생성
-  const chartImage = document.createElement('img');
-  chartImage.src = imageUrl;
-  Object.assign(chartImage.style, {
-    width: 'auto',
-    height: 'auto',
-    maxWidth: '100%',
-    maxHeight: 'calc(98vh - 150px)', // 버튼과 패딩 공간 제외
-    minWidth: '900px', // 최소 너비 증가
-    minHeight: '600px', // 최소 높이 증가
-    display: 'block',
-    margin: '0 auto'
+  // Mermaid 렌더링 영역 생성
+  const chartDiv = document.createElement('div');
+  chartDiv.className = 'mermaid-chart-content';
+  Object.assign(chartDiv.style, {
+    width: '100%',
+    height: '100%',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center'
   });
+
+  // Mermaid 초기화 및 렌더링
+  if (typeof mermaid !== 'undefined') {
+    mermaid.initialize({ startOnLoad: false, theme: 'default' });
+
+    const id = 'mermaid-' + Date.now();
+    const container = document.createElement('div');
+    container.id = id;
+    container.textContent = mermaidCode;
+    container.style.display = 'none';
+    document.body.appendChild(container);
+
+    mermaid.render(id, mermaidCode, (svgCode) => {
+      chartDiv.innerHTML = svgCode;
+
+      // SVG 크기 조정
+      const svg = chartDiv.querySelector('svg');
+      if (svg) {
+        svg.style.maxWidth = '100%';
+        svg.style.maxHeight = 'calc(95vh - 150px)';
+        svg.style.width = 'auto';
+        svg.style.height = 'auto';
+      }
+
+      container.remove();
+    });
+  } else {
+    chartDiv.innerHTML = `<p style="color: red;">Mermaid 라이브러리를 찾을 수 없습니다.</p>`;
+  }
 
   // 닫기 버튼 생성
   const closeButton = document.createElement('button');
@@ -207,17 +233,24 @@ function showMermaidOverlay(imageUrl) {
   });
 
   downloadButton.addEventListener('click', () => {
-    // 이미지 다운로드
-    const link = document.createElement('a');
-    link.href = imageUrl;
-    link.download = `mermaid-chart-${Date.now()}.png`;
-    link.click();
+    // SVG 다운로드
+    const svgElement = chartDiv.querySelector('svg');
+    if (svgElement) {
+      const svgData = new XMLSerializer().serializeToString(svgElement);
+      const blob = new Blob([svgData], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `mermaid-chart-${Date.now()}.svg`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
   });
 
   // 요소 조립
   chartContainer.appendChild(closeButton);
   chartContainer.appendChild(downloadButton);
-  chartContainer.appendChild(chartImage);
+  chartContainer.appendChild(chartDiv);
   overlay.appendChild(chartContainer);
   document.body.appendChild(overlay);
 

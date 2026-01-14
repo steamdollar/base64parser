@@ -1,22 +1,10 @@
 // Mermaid 차트 코드를 이미지로 변환하는 모듈
 
 /**
- * UTF-8 문자열을 Base64로 안전하게 인코딩
- * @param {string} str - 인코딩할 문자열
- * @returns {string} Base64 인코딩된 문자열
- */
-function utf8ToBase64(str) {
-  // UTF-8 바이트로 변환 후 Base64 인코딩
-  const utf8Bytes = new TextEncoder().encode(str);
-  const binaryString = Array.from(utf8Bytes, byte => String.fromCharCode(byte)).join('');
-  return btoa(binaryString);
-}
-
-/**
- * Mermaid 차트 코드를 이미지 URL로 변환
+ * Mermaid 차트 코드를 SVG로 렌더링 (클라이언트 사이드)
  * @param {string} mermaidCode - Mermaid 차트 코드
- * @param {string} format - 이미지 포맷 ('svg' 또는 'png'), 기본값: 'svg'
- * @returns {Promise<{success: boolean, imageUrl?: string, error?: string}>}
+ * @param {string} format - 이미지 포맷 (사용 안함, 호환성 유지)
+ * @returns {Promise<{success: boolean, svgCode?: string, error?: string}>}
  */
 export async function renderMermaidChart(mermaidCode, format = 'svg') {
   try {
@@ -25,16 +13,10 @@ export async function renderMermaidChart(mermaidCode, format = 'svg') {
       return { success: false, error: 'Mermaid 코드가 비어있습니다.' };
     }
 
-    // Mermaid Live Editor API를 사용하여 이미지 생성
-    // https://mermaid.ink/ 서비스 사용
-    // SVG는 벡터 형식으로 확대해도 선명함
-    const encoded = utf8ToBase64(mermaidCode.trim());
-    const endpoint = format === 'svg' ? 'svg' : 'img';
-    const imageUrl = `https://mermaid.ink/${endpoint}/${encoded}`;
-
+    // Mermaid 코드를 그대로 반환 (content script에서 렌더링)
     return {
       success: true,
-      imageUrl: imageUrl
+      svgCode: mermaidCode.trim()
     };
   } catch (error) {
     return {

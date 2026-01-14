@@ -17,8 +17,8 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"], 
-      "js": ["content.js"]      
+      "matches": ["<all_urls>"],
+      "js": ["libs/mermaid.min.js", "content.js"]
     }
   ],
   "action": {
@@ -44,5 +44,11 @@
       },
       "description": "Show Mermaid Chart Overlay"
     }
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["libs/mermaid.min.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }
