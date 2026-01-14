@@ -541,11 +541,6 @@ document.addEventListener('DOMContentLoaded', () => {
     showOverlayButton.textContent = '📊 오버레이 표시';
     showOverlayButton.disabled = false;
   });
-      mermaidStatus.textContent = `✗ ${overlayResult.error}`;
-      mermaidStatus.style.color = '#ff6b6b';
-      setTimeout(() => { mermaidStatus.style.color = '#666'; mermaidStatus.textContent = ''; }, 3000);
-    }
-  });
 
   // Ctrl+Enter로 렌더링
   mermaidCode.addEventListener('keydown', (e) => {
