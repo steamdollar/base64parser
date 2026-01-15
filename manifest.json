@@ -4,9 +4,11 @@
   "version": "1.2",
   "description": "A powerful toolkit for Base64 encoding/decoding and HTTP API requests.",
   "permissions": [
-    "contextMenus", 
+    "contextMenus",
     "storage",
-    "activeTab"
+    "activeTab",
+    "webRequest",
+    "declarativeNetRequest"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -19,7 +21,7 @@
     {
       "matches": ["<all_urls>"],
       "js": ["libs/mermaid.min.js", "content.js"]
-    }
+    },
   ],
   "action": {
     "default_popup": "popup.html",
@@ -50,5 +52,14 @@
       "resources": ["libs/mermaid.min.js"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ruleset_1",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  }
 }

@@ -119,45 +119,41 @@ chrome.commands.onCommand.addListener((command) => {
   }
 });
 
-// content.js로부터 Base64 처리 요청 받기
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "process_base64") {
-    const selectedText = request.text;
-    const imageCheck = isImageBase64(selectedText);
-    
-    if (imageCheck.isImage) {
-      // 이미지인 경우 새 탭에서 열기
-      openImageInNewTab(imageCheck.dataUrl);
-    } else {
-      // 일반 텍스트인 경우 디코딩 후 복사
-      const decodedText = decodeText(selectedText);
-      if (decodedText && !decodedText.startsWith("오류:")) {
-        chrome.tabs.sendMessage(sender.tab.id, {
-          action: "copy_to_clipboard",
-          text: decodedText
-        });
-      } else {
-        chrome.tabs.sendMessage(sender.tab.id, {
-          action: "show_error",
-          text: "디코딩 실패"
-        });
-      }
-    }
-  } else if (request.action === "process_mermaid") {
-    const selectedText = request.text;
 
-    // Mermaid 코드인지 확인
-    if (isMermaidCode(selectedText)) {
-      // Mermaid 코드를 content script로 전달 (클라이언트 사이드 렌더링)
-      chrome.tabs.sendMessage(sender.tab.id, {
-        action: "showMermaidOverlay",
-        mermaidCode: selectedText
-      });
-    } else {
-      chrome.tabs.sendMessage(sender.tab.id, {
-        action: "show_error",
-        text: "Mermaid 코드가 아닙니다"
-      });
+
+
+// content.js로부터의 메시지를 처리하는 리스너
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  (async () => {
+    switch (request.action) {
+      // Base64 처리 요청
+      case "process_base64":
+        const selectedText = request.text;
+        const imageCheck = isImageBase64(selectedText);
+        
+        if (imageCheck.isImage) {
+          openImageInNewTab(imageCheck.dataUrl);
+        } else {
+          const decodedText = decodeText(selectedText);
+          if (decodedText && !decodedText.startsWith("오류:")) {
+            chrome.tabs.sendMessage(sender.tab.id, { action: "copy_to_clipboard", text: decodedText });
+          } else {
+            chrome.tabs.sendMessage(sender.tab.id, { action: "show_error", text: "디코딩 실패" });
+          }
+        }
+        break;
+
+      // Mermaid 처리 요청
+      case "process_mermaid":
+        const mermaidText = request.text;
+        if (isMermaidCode(mermaidText)) {
+          chrome.tabs.sendMessage(sender.tab.id, { action: "showMermaidOverlay", mermaidCode: mermaidText });
+        } else {
+          chrome.tabs.sendMessage(sender.tab.id, { action: "show_error", text: "Mermaid 코드가 아닙니다" });
+        }
+        break;
     }
-  }
+  })();
+  
+  return true; // 비동기 응답을 위해 true 반환
 });
