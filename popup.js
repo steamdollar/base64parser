@@ -33,10 +33,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const saveTokenButton = document.getElementById('saveTokenButton');
   const toggleTokenVisibility = document.getElementById('toggleTokenVisibility');
   const savedTokensList = document.getElementById('savedTokensList');
-  const saveSettingsButton = document.getElementById('saveSettingsButton');
-  const resetSettingsButton = document.getElementById('resetSettingsButton');
-  
-  // 메모 관련 DOM 요소들
+      const saveSettingsButton = document.getElementById('saveSettingsButton');
+      const resetSettingsButton = document.getElementById('resetSettingsButton');
+
+    // 메모 관련 DOM 요소들
   const memoTitle = document.getElementById('memoTitle');
   const memoContent = document.getElementById('memoContent');
   const saveMemoButton = document.getElementById('saveMemoButton');
