@@ -92,18 +92,23 @@ function showNotification(message) {
   }, 1500);
 }
 
-// 머메이드 차트 오버레이 표시 함수 (클라이언트 사이드 렌더링)
-async function showMermaidOverlay(mermaidCode) {
-  // 기존 오버레이 제거
-  const oldOverlay = document.getElementById('mermaid-chart-overlay');
-  if (oldOverlay) {
-    oldOverlay.remove();
-  }
+// ===== Mermaid 오버레이 관련 상수 및 헬퍼 함수들 =====
 
-  // 오버레이 컨테이너 생성
+const OVERLAY_Z_INDEX = 2147483646;
+const BUTTON_Z_INDEX = 2147483647;
+
+const COLORS = {
+  closeButton: '#ff4444',
+  closeButtonHover: '#cc0000',
+  downloadButton: '#2196F3',
+  downloadButtonHover: '#1976D2',
+  error: 'red'
+};
+
+// 오버레이 요소 생성
+function createOverlayElement() {
   const overlay = document.createElement('div');
   overlay.id = 'mermaid-chart-overlay';
-
   Object.assign(overlay.style, {
     position: 'fixed',
     top: '0',
@@ -111,16 +116,19 @@ async function showMermaidOverlay(mermaidCode) {
     width: '100%',
     height: '100%',
     backgroundColor: 'rgba(0, 0, 0, 0.85)',
-    zIndex: '2147483646',
+    zIndex: String(OVERLAY_Z_INDEX),
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
     backdropFilter: 'blur(5px)'
   });
+  return overlay;
+}
 
-  // 차트 컨테이너 생성
-  const chartContainer = document.createElement('div');
-  Object.assign(chartContainer.style, {
+// 차트 컨테이너 생성
+function createChartContainer() {
+  const container = document.createElement('div');
+  Object.assign(container.style, {
     position: 'relative',
     maxWidth: '95vw',
     maxHeight: '95vh',
@@ -136,8 +144,11 @@ async function showMermaidOverlay(mermaidCode) {
     fontWeight: 'bold',
     boxSizing: 'border-box'
   });
+  return container;
+}
 
-  // Mermaid 렌더링 영역 생성
+// Mermaid 렌더링 영역 생성
+function createChartDiv() {
   const chartDiv = document.createElement('div');
   chartDiv.className = 'mermaid-chart-content';
   Object.assign(chartDiv.style, {
@@ -149,167 +160,119 @@ async function showMermaidOverlay(mermaidCode) {
     padding: '20px',
     boxSizing: 'border-box'
   });
+  return chartDiv;
+}
 
-  // Mermaid 초기화 및 렌더링
-  if (typeof mermaid !== 'undefined') {
-    try {
-      mermaid.initialize({
-        startOnLoad: false,
-        theme: 'default',
-        flowchart: {
-          htmlLabels: true,
-          curve: 'basis'
-        }
-      });
+// 오버레이 버튼 생성 (공용)
+function createOverlayButton(config) {
+  const button = document.createElement('button');
+  button.textContent = config.text;
+  Object.assign(button.style, {
+    position: 'absolute',
+    top: '10px',
+    border: 'none',
+    color: 'white',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
+    ...config.style
+  });
 
-      const id = 'mermaid-' + Date.now();
+  button.addEventListener('mouseenter', () => {
+    button.style.backgroundColor = config.hoverColor;
+  });
+  button.addEventListener('mouseleave', () => {
+    button.style.backgroundColor = config.color;
+  });
 
-      // 콜백 방식 사용 (구버전 호환)
-      try {
-        mermaid.render(id, mermaidCode, (svgCode) => {
-          chartDiv.innerHTML = svgCode;
+  return button;
+}
 
-          // SVG 크기 및 텍스트 처리
-          const svgElement = chartDiv.querySelector('svg');
-          if (svgElement) {
-            // 원본 크기 보존
-            const originalWidth = svgElement.getAttribute('width');
-            const originalHeight = svgElement.getAttribute('height');
+// SVG 스타일 처리
+function processSvgElement(svgElement, chartContainer) {
+  const originalWidth = svgElement.getAttribute('width');
+  const originalHeight = svgElement.getAttribute('height');
 
-            // viewBox 설정
-            if (!svgElement.getAttribute('viewBox') && originalWidth && originalHeight) {
-              svgElement.setAttribute('viewBox', `0 0 ${originalWidth} ${originalHeight}`);
-            }
-
-            // SVG 스타일 설정 - 크기 제한 제거
-            svgElement.removeAttribute('width');
-            svgElement.removeAttribute('height');
-            svgElement.style.width = '100%';
-            svgElement.style.height = 'auto';
-            svgElement.style.display = 'block';
-
-            // 모든 텍스트 관련 요소에 CSS 주입
-            const style = document.createElement('style');
-            style.textContent = `
-              #mermaid-chart-overlay svg * {
-                overflow: visible !important;
-              }
-              #mermaid-chart-overlay .nodeLabel,
-              #mermaid-chart-overlay .edgeLabel,
-              #mermaid-chart-overlay text {
-                overflow: visible !important;
-              }
-              #mermaid-chart-overlay foreignObject {
-                overflow: visible !important;
-              }
-              #mermaid-chart-overlay foreignObject > div {
-                overflow: visible !important;
-                white-space: nowrap !important;
-                text-overflow: clip !important;
-              }
-              #mermaid-chart-overlay .nodeLabel > span,
-              #mermaid-chart-overlay .edgeLabel > span {
-                white-space: nowrap !important;
-              }
-            `;
-            chartContainer.appendChild(style);
-          }
-        });
-      } catch (renderError) {
-        chartDiv.innerHTML = `<p style="color: red;">렌더링 오류: ${renderError.message}</p>`;
-        console.error('Mermaid 렌더링 오류:', renderError);
-      }
-    } catch (error) {
-      chartDiv.innerHTML = `<p style="color: red;">초기화 오류: ${error.message}</p>`;
-      console.error('Mermaid 초기화 오류:', error);
-    }
-  } else {
-    chartDiv.innerHTML = `<p style="color: red;">Mermaid 라이브러리를 찾을 수 없습니다.</p>`;
+  if (!svgElement.getAttribute('viewBox') && originalWidth && originalHeight) {
+    svgElement.setAttribute('viewBox', `0 0 ${originalWidth} ${originalHeight}`);
   }
 
-  // 닫기 버튼 생성
-  const closeButton = document.createElement('button');
-  closeButton.textContent = '✕';
-  Object.assign(closeButton.style, {
-    position: 'absolute',
-    top: '10px',
-    right: '10px',
-    width: '32px',
-    height: '32px',
-    border: 'none',
-    borderRadius: '50%',
-    backgroundColor: '#ff4444',
-    color: 'white',
-    fontSize: '18px',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'background-color 0.2s'
-  });
+  svgElement.removeAttribute('width');
+  svgElement.removeAttribute('height');
+  svgElement.style.width = '100%';
+  svgElement.style.height = 'auto';
+  svgElement.style.display = 'block';
 
-  closeButton.addEventListener('mouseenter', () => {
-    closeButton.style.backgroundColor = '#cc0000';
-  });
-
-  closeButton.addEventListener('mouseleave', () => {
-    closeButton.style.backgroundColor = '#ff4444';
-  });
-
-  closeButton.addEventListener('click', () => {
-    overlay.remove();
-  });
-
-  // 다운로드 버튼 생성
-  const downloadButton = document.createElement('button');
-  downloadButton.textContent = '💾 다운로드';
-  Object.assign(downloadButton.style, {
-    position: 'absolute',
-    top: '10px',
-    left: '10px',
-    padding: '8px 16px',
-    border: 'none',
-    borderRadius: '6px',
-    backgroundColor: '#2196F3',
-    color: 'white',
-    fontSize: '14px',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    transition: 'background-color 0.2s'
-  });
-
-  downloadButton.addEventListener('mouseenter', () => {
-    downloadButton.style.backgroundColor = '#1976D2';
-  });
-
-  downloadButton.addEventListener('mouseleave', () => {
-    downloadButton.style.backgroundColor = '#2196F3';
-  });
-
-  downloadButton.addEventListener('click', () => {
-    // SVG 다운로드
-    const svgElement = chartDiv.querySelector('svg');
-    if (svgElement) {
-      const svgData = new XMLSerializer().serializeToString(svgElement);
-      const blob = new Blob([svgData], { type: 'image/svg+xml' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `mermaid-chart-${Date.now()}.svg`;
-      link.click();
-      URL.revokeObjectURL(url);
+  const style = document.createElement('style');
+  style.textContent = `
+    #mermaid-chart-overlay svg * { overflow: visible !important; }
+    #mermaid-chart-overlay .nodeLabel,
+    #mermaid-chart-overlay .edgeLabel,
+    #mermaid-chart-overlay text { overflow: visible !important; }
+    #mermaid-chart-overlay foreignObject { overflow: visible !important; }
+    #mermaid-chart-overlay foreignObject > div {
+      overflow: visible !important;
+      white-space: nowrap !important;
+      text-overflow: clip !important;
     }
-  });
+    #mermaid-chart-overlay .nodeLabel > span,
+    #mermaid-chart-overlay .edgeLabel > span { white-space: nowrap !important; }
+  `;
+  chartContainer.appendChild(style);
+}
 
-  // 요소 조립
-  chartContainer.appendChild(closeButton);
-  chartContainer.appendChild(downloadButton);
-  chartContainer.appendChild(chartDiv);
-  overlay.appendChild(chartContainer);
-  document.body.appendChild(overlay);
+// Mermaid 차트 렌더링
+function renderMermaidToDiv(mermaidCode, chartDiv, chartContainer) {
+  if (typeof mermaid === 'undefined') {
+    chartDiv.innerHTML = `<p style="color: ${COLORS.error};">Mermaid 라이브러리를 찾을 수 없습니다.</p>`;
+    return;
+  }
 
-  // 오버레이 클릭 시 닫기 (차트 컨테이너 제외)
+  try {
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'default',
+      flowchart: { htmlLabels: true, curve: 'basis' }
+    });
+
+    const id = 'mermaid-' + Date.now();
+
+    try {
+      mermaid.render(id, mermaidCode, (svgCode) => {
+        chartDiv.innerHTML = svgCode;
+        const svgElement = chartDiv.querySelector('svg');
+        if (svgElement) {
+          processSvgElement(svgElement, chartContainer);
+        }
+      });
+    } catch (renderError) {
+      chartDiv.innerHTML = `<p style="color: ${COLORS.error};">렌더링 오류: ${renderError.message}</p>`;
+      console.error('Mermaid 렌더링 오류:', renderError);
+    }
+  } catch (error) {
+    chartDiv.innerHTML = `<p style="color: ${COLORS.error};">초기화 오류: ${error.message}</p>`;
+    console.error('Mermaid 초기화 오류:', error);
+  }
+}
+
+// SVG 다운로드
+function downloadSvg(chartDiv) {
+  const svgElement = chartDiv.querySelector('svg');
+  if (svgElement) {
+    const svgData = new XMLSerializer().serializeToString(svgElement);
+    const blob = new Blob([svgData], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `mermaid-chart-${Date.now()}.svg`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+}
+
+// 오버레이 이벤트 설정
+function setupOverlayEvents(overlay) {
+  // 오버레이 바깥 클릭 시 닫기
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) {
       overlay.remove();
@@ -324,4 +287,65 @@ async function showMermaidOverlay(mermaidCode) {
     }
   };
   document.addEventListener('keydown', handleEscape);
+}
+
+// 머메이드 차트 오버레이 표시 함수 (메인)
+async function showMermaidOverlay(mermaidCode) {
+  // 기존 오버레이 제거
+  const oldOverlay = document.getElementById('mermaid-chart-overlay');
+  if (oldOverlay) {
+    oldOverlay.remove();
+  }
+
+  // 요소 생성
+  const overlay = createOverlayElement();
+  const chartContainer = createChartContainer();
+  const chartDiv = createChartDiv();
+
+  // Mermaid 렌더링
+  renderMermaidToDiv(mermaidCode, chartDiv, chartContainer);
+
+  // 닫기 버튼
+  const closeButton = createOverlayButton({
+    text: '✕',
+    color: COLORS.closeButton,
+    hoverColor: COLORS.closeButtonHover,
+    style: {
+      right: '10px',
+      width: '32px',
+      height: '32px',
+      borderRadius: '50%',
+      backgroundColor: COLORS.closeButton,
+      fontSize: '18px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }
+  });
+  closeButton.addEventListener('click', () => overlay.remove());
+
+  // 다운로드 버튼
+  const downloadButton = createOverlayButton({
+    text: '💾 다운로드',
+    color: COLORS.downloadButton,
+    hoverColor: COLORS.downloadButtonHover,
+    style: {
+      left: '10px',
+      padding: '8px 16px',
+      borderRadius: '6px',
+      backgroundColor: COLORS.downloadButton,
+      fontSize: '14px'
+    }
+  });
+  downloadButton.addEventListener('click', () => downloadSvg(chartDiv));
+
+  // 요소 조립
+  chartContainer.appendChild(closeButton);
+  chartContainer.appendChild(downloadButton);
+  chartContainer.appendChild(chartDiv);
+  overlay.appendChild(chartContainer);
+  document.body.appendChild(overlay);
+
+  // 이벤트 설정
+  setupOverlayEvents(overlay);
 }

@@ -4,6 +4,10 @@ import { sendHttpRequest } from './modules/http/index.js';
 import { openImageInNewTab, showResult, switchTab } from './modules/base64/ui.js';
 import { SettingsManager } from './modules/settings.js';
 import { renderMermaidChart, showMermaidOverlay, MERMAID_EXAMPLES } from './modules/mermaid/index.js';
+import { getSync, setSync, getLocal, setLocal } from './modules/storage.js';
+import { getAllMemos, getMemo, saveMemo as saveMemoToStorage, deleteMemo as deleteMemoFromStorage } from './modules/memo/index.js';
+import { COLORS, TIMING } from './modules/constants.js';
+import { showStatusMessage } from './modules/ui-utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // 설정 관리자 초기화
@@ -173,35 +177,36 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 토글 스위치 초기화
-  chrome.storage.sync.get(['isEnabled'], (result) => {
-    const isEnabled = result.isEnabled !== undefined ? result.isEnabled : true; 
+  (async () => {
+    const result = await getSync(['isEnabled']);
+    const isEnabled = result.isEnabled !== undefined ? result.isEnabled : true;
     toggleSwitch.checked = isEnabled;
     statusText.textContent = isEnabled ? 'On' : 'Off';
-  });
+  })();
 
-  toggleSwitch.addEventListener('change', () => {
+  toggleSwitch.addEventListener('change', async () => {
     const isEnabled = toggleSwitch.checked;
-    chrome.storage.sync.set({ isEnabled: isEnabled }, () => {
-      statusText.textContent = isEnabled ? 'On' : 'Off';
-    });
+    await setSync({ isEnabled: isEnabled });
+    statusText.textContent = isEnabled ? 'On' : 'Off';
   });
 
   // 설정 로드 실행
   loadSettings();
 
   // 마지막 사용 탭 복원
-  chrome.storage.local.get(['lastActiveTab'], (result) => {
+  (async () => {
+    const result = await getLocal(['lastActiveTab']);
     const lastTab = result.lastActiveTab || 'base64';
     switchTab(lastTab, tabButtons, tabPanels);
-  });
+  })();
 
   // 탭 전환 기능
   tabButtons.forEach(button => {
-    button.addEventListener('click', () => {
+    button.addEventListener('click', async () => {
       const targetTab = button.getAttribute('data-tab');
       switchTab(targetTab, tabButtons, tabPanels);
       // 마지막 사용 탭 저장
-      chrome.storage.local.set({ lastActiveTab: targetTab });
+      await setLocal({ lastActiveTab: targetTab });
     });
   });
 
@@ -378,90 +383,66 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // 저장된 메모 리스트 로드
   async function loadSavedMemos() {
-    return new Promise((resolve) => {
-      chrome.storage.local.get(['savedMemos'], (result) => {
-        const memos = result.savedMemos || {};
-        savedMemosList.innerHTML = '';
-        
-        const memoKeys = Object.keys(memos);
-        if (memoKeys.length === 0) {
-          savedMemosList.innerHTML = '<div style="color: #999; font-size: 12px; padding: 8px;">No saved memos</div>';
-          resolve();
-          return;
-        }
-        
-        for (const title of memoKeys) {
-          const memoItem = document.createElement('div');
-          memoItem.className = 'token-item';
-          memoItem.innerHTML = `
-            <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${memos[title]}">${title}</span>
-            <div style="display: flex; gap: 3px;">
-              <button class="copy-memo-btn use-token-btn" data-title="${title}">📋 Copy</button>
-              <button class="delete-memo-btn delete-token-btn" data-title="${title}">🗑️</button>
-            </div>
-          `;
-          savedMemosList.appendChild(memoItem);
-        }
-        resolve();
-      });
-    });
+    const memos = await getAllMemos();
+    savedMemosList.innerHTML = '';
+
+    const memoKeys = Object.keys(memos);
+    if (memoKeys.length === 0) {
+      savedMemosList.innerHTML = '<div style="color: #999; font-size: 12px; padding: 8px;">No saved memos</div>';
+      return;
+    }
+
+    for (const title of memoKeys) {
+      const memoItem = document.createElement('div');
+      memoItem.className = 'token-item';
+      memoItem.innerHTML = `
+        <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${memos[title]}">${title}</span>
+        <div style="display: flex; gap: 3px;">
+          <button class="copy-memo-btn use-token-btn" data-title="${title}">📋 Copy</button>
+          <button class="delete-memo-btn delete-token-btn" data-title="${title}">🗑️</button>
+        </div>
+      `;
+      savedMemosList.appendChild(memoItem);
+    }
   }
   
   // 메모 저장
-  saveMemoButton.addEventListener('click', () => {
+  saveMemoButton.addEventListener('click', async () => {
     const title = memoTitle.value.trim();
     const content = memoContent.value.trim();
-    
+
     if (!title || !content) {
-      memoStatus.textContent = '⚠️ Please enter both title and content';
-      memoStatus.style.color = '#ff6b6b';
-      setTimeout(() => { memoStatus.style.color = '#666'; memoStatus.textContent = ''; }, 2000);
+      showStatusMessage(memoStatus, '⚠️ Please enter both title and content', 'error');
       return;
     }
-    
-    chrome.storage.local.get(['savedMemos'], (result) => {
-      const memos = result.savedMemos || {};
-      memos[title] = content;
-      chrome.storage.local.set({ savedMemos: memos }, () => {
-        memoStatus.textContent = `✓ "${title}" saved`;
-        memoStatus.style.color = '#4CAF50';
-        memoTitle.value = '';
-        memoContent.value = '';
-        loadSavedMemos();
-        setTimeout(() => { memoStatus.style.color = '#666'; memoStatus.textContent = ''; }, 2000);
-      });
-    });
+
+    const success = await saveMemoToStorage(title, content);
+    if (success) {
+      showStatusMessage(memoStatus, `✓ "${title}" saved`, 'success');
+      memoTitle.value = '';
+      memoContent.value = '';
+      loadSavedMemos();
+    } else {
+      showStatusMessage(memoStatus, '✗ 저장 실패', 'error');
+    }
   });
   
   // 메모 리스트 이벤트 위임 (복사/삭제)
-  savedMemosList.addEventListener('click', (e) => {
+  savedMemosList.addEventListener('click', async (e) => {
     const title = e.target.getAttribute('data-title');
     if (!title) return;
-    
+
     if (e.target.classList.contains('copy-memo-btn')) {
-      chrome.storage.local.get(['savedMemos'], (result) => {
-        const memos = result.savedMemos || {};
-        const content = memos[title];
-        if (content) {
-          navigator.clipboard.writeText(content).then(() => {
-            memoStatus.textContent = `✓ "${title}" copied to clipboard`;
-            memoStatus.style.color = '#4CAF50';
-            setTimeout(() => { memoStatus.style.color = '#666'; memoStatus.textContent = ''; }, 2000);
-          });
-        }
-      });
+      const content = await getMemo(title);
+      if (content) {
+        await navigator.clipboard.writeText(content);
+        showStatusMessage(memoStatus, `✓ "${title}" copied to clipboard`, 'success');
+      }
     } else if (e.target.classList.contains('delete-memo-btn')) {
       if (confirm(`Delete "${title}"?`)) {
-        chrome.storage.local.get(['savedMemos'], (result) => {
-          const memos = result.savedMemos || {};
-          delete memos[title];
-          chrome.storage.local.set({ savedMemos: memos }, () => {
-            memoStatus.textContent = `✓ "${title}" deleted`;
-            memoStatus.style.color = '#ff6b6b';
-            loadSavedMemos();
-            setTimeout(() => { memoStatus.style.color = '#666'; memoStatus.textContent = ''; }, 2000);
-          });
-        });
+        await deleteMemoFromStorage(title);
+        showStatusMessage(memoStatus, `✓ "${title}" deleted`, 'error');
+        loadSavedMemos();
       }
     }
   });
@@ -493,15 +474,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const code = mermaidCode.value.trim();
 
     if (!code) {
-      mermaidStatus.textContent = '⚠️ Mermaid 코드를 입력해주세요.';
-      mermaidStatus.style.color = '#ff6b6b';
-      setTimeout(() => { mermaidStatus.style.color = '#666'; mermaidStatus.textContent = ''; }, 2000);
+      showStatusMessage(mermaidStatus, '⚠️ Mermaid 코드를 입력해주세요.', 'error');
       return;
     }
 
-    mermaidStatus.textContent = '✓ 코드가 확인되었습니다. 오버레이 버튼을 눌러주세요.';
-    mermaidStatus.style.color = '#4CAF50';
-    setTimeout(() => { mermaidStatus.style.color = '#666'; mermaidStatus.textContent = ''; }, 2000);
+    showStatusMessage(mermaidStatus, '✓ 코드가 확인되었습니다. 오버레이 버튼을 눌러주세요.', 'success');
   });
 
   // 오버레이로 표시
@@ -509,9 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const code = mermaidCode.value.trim();
 
     if (!code) {
-      mermaidStatus.textContent = '⚠️ Mermaid 코드를 입력해주세요.';
-      mermaidStatus.style.color = '#ff6b6b';
-      setTimeout(() => { mermaidStatus.style.color = '#666'; mermaidStatus.textContent = ''; }, 2000);
+      showStatusMessage(mermaidStatus, '⚠️ Mermaid 코드를 입력해주세요.', 'error');
       return;
     }
 
@@ -528,14 +503,10 @@ document.addEventListener('DOMContentLoaded', () => {
           mermaidCode: code
         });
 
-        mermaidStatus.textContent = '✓ 오버레이가 표시되었습니다.';
-        mermaidStatus.style.color = '#4CAF50';
-        setTimeout(() => { mermaidStatus.style.color = '#666'; mermaidStatus.textContent = ''; }, 2000);
+        showStatusMessage(mermaidStatus, '✓ 오버레이가 표시되었습니다.', 'success');
       }
     } catch (error) {
-      mermaidStatus.textContent = '✗ 페이지를 새로고침한 후 다시 시도해주세요.';
-      mermaidStatus.style.color = '#ff6b6b';
-      setTimeout(() => { mermaidStatus.style.color = '#666'; mermaidStatus.textContent = ''; }, 3000);
+      showStatusMessage(mermaidStatus, '✗ 페이지를 새로고침한 후 다시 시도해주세요.', 'error', 3000);
     }
 
     showOverlayButton.textContent = '📊 오버레이 표시';
