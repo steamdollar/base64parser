@@ -15,7 +15,11 @@ function base64ToUtf8(base64) {
 
 // 백그라운드 스크립트로부터 메시지를 수신 대기
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "copy_to_clipboard") {
+  if (request.action === "ping") {
+    // Content script 로드 확인용
+    sendResponse({ status: "ready" });
+    return true;
+  } else if (request.action === "copy_to_clipboard") {
     // 클립보드에 복사
     navigator.clipboard.writeText(request.text).then(() => {
       showNotification("✓ 복사 완료!");
@@ -129,7 +133,8 @@ async function showMermaidOverlay(mermaidCode) {
     overflow: 'auto',
     fontFamily: 'Arial, sans-serif',
     fontSize: '16px',
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    boxSizing: 'border-box'
   });
 
   // Mermaid 렌더링 영역 생성
@@ -137,37 +142,87 @@ async function showMermaidOverlay(mermaidCode) {
   chartDiv.className = 'mermaid-chart-content';
   Object.assign(chartDiv.style, {
     width: '100%',
-    height: '100%',
+    minHeight: '100%',
     display: 'flex',
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'flex-start',
+    padding: '20px',
+    boxSizing: 'border-box'
   });
 
   // Mermaid 초기화 및 렌더링
   if (typeof mermaid !== 'undefined') {
-    mermaid.initialize({ startOnLoad: false, theme: 'default' });
+    try {
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: 'default',
+        flowchart: {
+          htmlLabels: true,
+          curve: 'basis'
+        }
+      });
 
-    const id = 'mermaid-' + Date.now();
-    const container = document.createElement('div');
-    container.id = id;
-    container.textContent = mermaidCode;
-    container.style.display = 'none';
-    document.body.appendChild(container);
+      const id = 'mermaid-' + Date.now();
 
-    mermaid.render(id, mermaidCode, (svgCode) => {
-      chartDiv.innerHTML = svgCode;
+      // 콜백 방식 사용 (구버전 호환)
+      try {
+        mermaid.render(id, mermaidCode, (svgCode) => {
+          chartDiv.innerHTML = svgCode;
 
-      // SVG 크기 조정
-      const svg = chartDiv.querySelector('svg');
-      if (svg) {
-        svg.style.maxWidth = '100%';
-        svg.style.maxHeight = 'calc(95vh - 150px)';
-        svg.style.width = 'auto';
-        svg.style.height = 'auto';
+          // SVG 크기 및 텍스트 처리
+          const svgElement = chartDiv.querySelector('svg');
+          if (svgElement) {
+            // 원본 크기 보존
+            const originalWidth = svgElement.getAttribute('width');
+            const originalHeight = svgElement.getAttribute('height');
+
+            // viewBox 설정
+            if (!svgElement.getAttribute('viewBox') && originalWidth && originalHeight) {
+              svgElement.setAttribute('viewBox', `0 0 ${originalWidth} ${originalHeight}`);
+            }
+
+            // SVG 스타일 설정 - 크기 제한 제거
+            svgElement.removeAttribute('width');
+            svgElement.removeAttribute('height');
+            svgElement.style.width = '100%';
+            svgElement.style.height = 'auto';
+            svgElement.style.display = 'block';
+
+            // 모든 텍스트 관련 요소에 CSS 주입
+            const style = document.createElement('style');
+            style.textContent = `
+              #mermaid-chart-overlay svg * {
+                overflow: visible !important;
+              }
+              #mermaid-chart-overlay .nodeLabel,
+              #mermaid-chart-overlay .edgeLabel,
+              #mermaid-chart-overlay text {
+                overflow: visible !important;
+              }
+              #mermaid-chart-overlay foreignObject {
+                overflow: visible !important;
+              }
+              #mermaid-chart-overlay foreignObject > div {
+                overflow: visible !important;
+                white-space: nowrap !important;
+                text-overflow: clip !important;
+              }
+              #mermaid-chart-overlay .nodeLabel > span,
+              #mermaid-chart-overlay .edgeLabel > span {
+                white-space: nowrap !important;
+              }
+            `;
+            chartContainer.appendChild(style);
+          }
+        });
+      } catch (renderError) {
+        chartDiv.innerHTML = `<p style="color: red;">렌더링 오류: ${renderError.message}</p>`;
+        console.error('Mermaid 렌더링 오류:', renderError);
       }
-
-      container.remove();
-    });
+    } catch (error) {
+      chartDiv.innerHTML = `<p style="color: red;">초기화 오류: ${error.message}</p>`;
+      console.error('Mermaid 초기화 오류:', error);
+    }
   } else {
     chartDiv.innerHTML = `<p style="color: red;">Mermaid 라이브러리를 찾을 수 없습니다.</p>`;
   }

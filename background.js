@@ -77,12 +77,12 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
             chrome.tabs.sendMessage(tab.id, {
               action: "copy_to_clipboard",
               text: decodedText
-            });
+            }).catch(err => console.error('복사 메시지 전송 실패:', err));
           } else {
             chrome.tabs.sendMessage(tab.id, {
               action: "show_error",
               text: "디코딩 실패"
-            });
+            }).catch(err => console.error('에러 메시지 표시 실패:', err));
           }
         }
       }
@@ -90,28 +90,55 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 });
 
+// Content script 재주입 함수
+async function ensureContentScript(tabId) {
+  try {
+    // 먼저 메시지 전송 시도
+    await chrome.tabs.sendMessage(tabId, { action: "ping" });
+    return true;
+  } catch (error) {
+    // 실패하면 content script 재주입
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        files: ['libs/mermaid.min.js', 'content.js']
+      });
+      return true;
+    } catch (injectError) {
+      console.error('Content script 주입 실패:', injectError);
+      return false;
+    }
+  }
+}
+
 // 단축키 명령어 리스너
-chrome.commands.onCommand.addListener((command) => {
+chrome.commands.onCommand.addListener(async (command) => {
   if (command === "decode-base64") {
-    chrome.storage.sync.get(['isEnabled'], (result) => {
+    chrome.storage.sync.get(['isEnabled'], async (result) => {
       if (result.isEnabled) {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
           if (tabs[0]) {
-            chrome.tabs.sendMessage(tabs[0].id, {
-              action: "get_selection_and_process"
-            });
+            const ready = await ensureContentScript(tabs[0].id);
+            if (ready) {
+              chrome.tabs.sendMessage(tabs[0].id, {
+                action: "get_selection_and_process"
+              }).catch(err => console.error('Base64 디코딩 메시지 전송 실패:', err));
+            }
           }
         });
       }
     });
   } else if (command === "show-mermaid") {
-    chrome.storage.sync.get(['isEnabled'], (result) => {
+    chrome.storage.sync.get(['isEnabled'], async (result) => {
       if (result.isEnabled) {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
           if (tabs[0]) {
-            chrome.tabs.sendMessage(tabs[0].id, {
-              action: "get_selection_for_mermaid"
-            });
+            const ready = await ensureContentScript(tabs[0].id);
+            if (ready) {
+              chrome.tabs.sendMessage(tabs[0].id, {
+                action: "get_selection_for_mermaid"
+              }).catch(err => console.error('Mermaid 메시지 전송 실패:', err));
+            }
           }
         });
       }
@@ -130,15 +157,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       case "process_base64":
         const selectedText = request.text;
         const imageCheck = isImageBase64(selectedText);
-        
+
         if (imageCheck.isImage) {
           openImageInNewTab(imageCheck.dataUrl);
         } else {
           const decodedText = decodeText(selectedText);
           if (decodedText && !decodedText.startsWith("오류:")) {
-            chrome.tabs.sendMessage(sender.tab.id, { action: "copy_to_clipboard", text: decodedText });
+            chrome.tabs.sendMessage(sender.tab.id, { action: "copy_to_clipboard", text: decodedText })
+              .catch(err => console.error('복사 메시지 전송 실패:', err));
           } else {
-            chrome.tabs.sendMessage(sender.tab.id, { action: "show_error", text: "디코딩 실패" });
+            chrome.tabs.sendMessage(sender.tab.id, { action: "show_error", text: "디코딩 실패" })
+              .catch(err => console.error('에러 메시지 표시 실패:', err));
           }
         }
         break;
@@ -147,9 +176,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       case "process_mermaid":
         const mermaidText = request.text;
         if (isMermaidCode(mermaidText)) {
-          chrome.tabs.sendMessage(sender.tab.id, { action: "showMermaidOverlay", mermaidCode: mermaidText });
+          chrome.tabs.sendMessage(sender.tab.id, { action: "showMermaidOverlay", mermaidCode: mermaidText })
+            .catch(err => console.error('Mermaid 오버레이 표시 실패:', err));
         } else {
-          chrome.tabs.sendMessage(sender.tab.id, { action: "show_error", text: "Mermaid 코드가 아닙니다" });
+          chrome.tabs.sendMessage(sender.tab.id, { action: "show_error", text: "Mermaid 코드가 아닙니다" })
+            .catch(err => console.error('에러 메시지 표시 실패:', err));
         }
         break;
     }
