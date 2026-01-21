@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Context Decoder",
+  "name": "Dev Toolkit",
   "version": "1.2",
   "description": "A powerful toolkit for Base64 encoding/decoding and HTTP API requests.",
   "permissions": [
@@ -19,13 +19,18 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["libs/mermaid.min.js", "content.js"]
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "libs/mermaid.min.js",
+        "content.js"
+      ]
     }
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_icon": {      
+    "default_icon": {
       "48": "images/icon48.png"
     }
   },
@@ -49,8 +54,12 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["libs/mermaid.min.js"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "libs/mermaid.min.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }
