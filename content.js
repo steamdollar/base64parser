@@ -130,17 +130,17 @@ function createChartContainer() {
   const container = document.createElement('div');
   Object.assign(container.style, {
     position: 'relative',
-    maxWidth: '95vw',
-    maxHeight: '95vh',
-    minWidth: '900px',
-    minHeight: '600px',
+    maxWidth: '98vw',
+    maxHeight: '98vh',
+    minWidth: '1600px',
+    minHeight: '900px',
     backgroundColor: 'white',
     borderRadius: '12px',
     padding: '70px 40px 40px 40px',
     boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
     overflow: 'auto',
     fontFamily: 'Arial, sans-serif',
-    fontSize: '16px',
+    fontSize: '20px',
     fontWeight: 'bold',
     boxSizing: 'border-box'
   });
