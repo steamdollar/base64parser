@@ -12,7 +12,7 @@ import { showStatusMessage } from './modules/ui-utils.js';
 document.addEventListener('DOMContentLoaded', () => {
   // 설정 관리자 초기화
   const settingsManager = new SettingsManager();
-  
+
   // DOM 요소들 가져오기
   const toggleSwitch = document.getElementById('toggleSwitch');
   const statusText = document.getElementById('statusText');
@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const resultDiv = document.getElementById('result');
   const tabButtons = document.querySelectorAll('.tab-button');
   const tabPanels = document.querySelectorAll('.tab-panel');
-  
+
   // 설정 관련 DOM 요소들
   const defaultUrl = document.getElementById('defaultUrl');
   const defaultMethod = document.getElementById('defaultMethod');
@@ -37,10 +37,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const saveTokenButton = document.getElementById('saveTokenButton');
   const toggleTokenVisibility = document.getElementById('toggleTokenVisibility');
   const savedTokensList = document.getElementById('savedTokensList');
-      const saveSettingsButton = document.getElementById('saveSettingsButton');
-      const resetSettingsButton = document.getElementById('resetSettingsButton');
+  const saveSettingsButton = document.getElementById('saveSettingsButton');
+  const resetSettingsButton = document.getElementById('resetSettingsButton');
 
-    // 메모 관련 DOM 요소들
+  // 메모 관련 DOM 요소들
   const memoTitle = document.getElementById('memoTitle');
   const memoContent = document.getElementById('memoContent');
   const saveMemoButton = document.getElementById('saveMemoButton');
@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tokens = await settingsManager.getAllTokens();
     const defaultToken = await settingsManager.getDefaultToken();
     savedTokensList.innerHTML = '';
-    
+
     for (const [name, token] of Object.entries(tokens)) {
       const tokenItem = document.createElement('div');
       tokenItem.className = 'token-item';
@@ -122,15 +122,15 @@ document.addEventListener('DOMContentLoaded', () => {
   async function useTokenInFetch(tokenName) {
     const tokens = await settingsManager.getAllTokens();
     const tokenValue = tokens[tokenName];
-    
+
     if (tokenValue) {
       // Fetch 탭으로 전환
       switchTab('fetch', tabButtons, tabPanels);
-      
+
       // Authorization 헤더에 토큰 추가
       const formattedToken = settingsManager.formatTokenForHeader(tokenValue);
       const currentHeaders = requestHeaders.value.trim();
-      
+
       let headers = {};
       if (currentHeaders) {
         try {
@@ -139,10 +139,10 @@ document.addEventListener('DOMContentLoaded', () => {
           headers = {};
         }
       }
-      
+
       headers['Authorization'] = formattedToken;
       requestHeaders.value = JSON.stringify(headers, null, 2);
-      
+
       showResult(resultDiv, `✓ "${tokenName}" token has been added to Authorization header.`);
     }
   }
@@ -156,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (settings.defaultMethod) {
       requestMethod.value = settings.defaultMethod;
     }
-    
+
     // 기본 헤더와 기본 토큰을 결합
     let headers = {};
     if (settings.defaultHeaders) {
@@ -166,13 +166,13 @@ document.addEventListener('DOMContentLoaded', () => {
         headers = {};
       }
     }
-    
+
     // 기본 토큰이 있으면 Authorization 헤더에 추가
     const defaultTokenValue = await settingsManager.getDefaultTokenValue();
     if (defaultTokenValue) {
       headers['Authorization'] = settingsManager.formatTokenForHeader(defaultTokenValue);
     }
-    
+
     requestHeaders.value = JSON.stringify(headers, null, 2);
   }
 
@@ -213,14 +213,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // 디코딩 버튼 클릭
   decodeButton.addEventListener('click', () => {
     const inputText = base64Input.value.trim();
-    
+
     if (!inputText) {
       showResult(resultDiv, '⚠️ Please enter Base64 text.');
       return;
     }
-    
+
     const imageCheck = isImageBase64(inputText);
-    
+
     if (imageCheck.isImage) {
       // 이미지인 경우 새 탭에서 열기
       openImageInNewTab(imageCheck.dataUrl);
@@ -239,12 +239,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // 인코딩 버튼 클릭
   encodeButton.addEventListener('click', () => {
     const inputText = base64Input.value.trim();
-    
+
     if (!inputText) {
       showResult(resultDiv, '⚠️ Please enter text to encode.');
       return;
     }
-    
+
     const encodedText = utf8ToBase64(inputText);
     if (encodedText) {
       showResult(resultDiv, `<strong>Encoded Result:</strong><div class="result-text">${encodedText}</div>`, true);
@@ -259,12 +259,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const method = requestMethod.value;
     const headersText = requestHeaders.value.trim();
     const bodyText = requestBody.value.trim();
-    
+
     if (!url) {
       showResult(resultDiv, '⚠️ Please enter URL.');
       return;
     }
-    
+
     let headers = {};
     if (headersText) {
       try {
@@ -274,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
     }
-    
+
     let body = null;
     if (bodyText && method !== 'GET') {
       try {
@@ -285,15 +285,15 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
     }
-    
+
     sendRequestButton.textContent = 'Sending...';
     sendRequestButton.disabled = true;
-    
+
     const result = await sendHttpRequest(url, method, headers, body);
-    
+
     sendRequestButton.textContent = 'Send Request';
     sendRequestButton.disabled = false;
-    
+
     if (result.success) {
       const responseHtml = `
         <strong>Response Result:</strong>
@@ -310,33 +310,33 @@ document.addEventListener('DOMContentLoaded', () => {
       showResult(resultDiv, `✗ Request failed: ${result.error}`);
     }
   });
-  
+
   // Enter 키로도 디코딩
   base64Input.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === 'Enter') {
       decodeButton.click();
     }
   });
-  
+
   // 설정 관련 이벤트 핸들러들
-  
+
   // 토큰 가시성 토글
   toggleTokenVisibility.addEventListener('click', () => {
     const isPassword = accessToken.type === 'password';
     accessToken.type = isPassword ? 'text' : 'password';
     toggleTokenVisibility.textContent = isPassword ? '🙈' : '👁️';
   });
-  
+
   // 토큰 저장
   saveTokenButton.addEventListener('click', async () => {
     const tokenNameValue = tokenName.value.trim();
     const tokenValue = accessToken.value.trim();
-    
+
     if (!tokenNameValue || !tokenValue) {
       showResult(resultDiv, '⚠️ Please enter both token name and value.');
       return;
     }
-    
+
     const success = await settingsManager.saveToken(tokenNameValue, tokenValue);
     if (success) {
       showResult(resultDiv, `✓ "${tokenNameValue}" token has been saved.`);
@@ -347,7 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
       showResult(resultDiv, '✗ Failed to save token.');
     }
   });
-  
+
   // 설정 저장
   saveSettingsButton.addEventListener('click', async () => {
     const settings = {
@@ -356,7 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
       defaultHeaders: defaultHeaders.value.trim(),
       savedTokens: await settingsManager.getAllTokens()
     };
-    
+
     const success = await settingsManager.saveSettings(settings);
     if (success) {
       showResult(resultDiv, '✓ Settings have been saved.');
@@ -365,7 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
       showResult(resultDiv, '✗ Failed to save settings.');
     }
   });
-  
+
   // 설정 초기화
   resetSettingsButton.addEventListener('click', async () => {
     if (confirm('Are you sure you want to reset all settings? All saved tokens will also be deleted.')) {
@@ -378,9 +378,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
-  
+
   // 메모 기능 (K-V 형태)
-  
+
   // 저장된 메모 리스트 로드
   async function loadSavedMemos() {
     const memos = await getAllMemos();
@@ -405,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
       savedMemosList.appendChild(memoItem);
     }
   }
-  
+
   // 메모 저장
   saveMemoButton.addEventListener('click', async () => {
     const title = memoTitle.value.trim();
@@ -426,7 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
       showStatusMessage(memoStatus, '✗ 저장 실패', 'error');
     }
   });
-  
+
   // 메모 리스트 이벤트 위임 (복사/삭제)
   savedMemosList.addEventListener('click', async (e) => {
     const title = e.target.getAttribute('data-title');
@@ -446,7 +446,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
-  
+
   // 자동 저장 (Ctrl+S)
   memoContent.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === 's') {
@@ -454,7 +454,7 @@ document.addEventListener('DOMContentLoaded', () => {
       saveMemoButton.click();
     }
   });
-  
+
   // 초기 메모 로드
   loadSavedMemos();
 
@@ -526,4 +526,5 @@ document.addEventListener('DOMContentLoaded', () => {
     mermaidPreview.style.display = 'none';
     mermaidImage.src = '';
   });
+
 });

@@ -67,7 +67,7 @@ function showNotification(message) {
   const notification = document.createElement('div');
   notification.id = 'base64-decoder-notification';
   notification.textContent = message;
-  
+
   Object.assign(notification.style, {
     position: 'fixed',
     top: '20px',
@@ -132,8 +132,8 @@ function createChartContainer() {
     position: 'relative',
     maxWidth: '95vw',
     maxHeight: '95vh',
-    minWidth: '750px',
-    minHeight: '480px',
+    minWidth: '900px',
+    minHeight: '600px',
     backgroundColor: 'white',
     borderRadius: '12px',
     padding: '70px 40px 40px 40px',
@@ -199,7 +199,9 @@ function processSvgElement(svgElement, chartContainer) {
 
   svgElement.removeAttribute('width');
   svgElement.removeAttribute('height');
-  svgElement.style.width = '100%';
+  svgElement.style.width = 'auto';
+  svgElement.style.minWidth = '100%';
+  svgElement.style.maxWidth = 'none';
   svgElement.style.height = 'auto';
   svgElement.style.display = 'block';
 
