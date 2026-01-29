@@ -130,10 +130,10 @@ function createChartContainer() {
   const container = document.createElement('div');
   Object.assign(container.style, {
     position: 'relative',
-    maxWidth: '98vw',
-    maxHeight: '98vh',
-    minWidth: '1600px',
-    minHeight: '900px',
+    maxWidth: '75vw',
+    maxHeight: '75vh',
+    minWidth: '750px',
+    minHeight: '600px',
     backgroundColor: 'white',
     borderRadius: '12px',
     padding: '70px 40px 40px 40px',
