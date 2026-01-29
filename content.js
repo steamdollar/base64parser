@@ -152,10 +152,11 @@ function createChartDiv() {
   const chartDiv = document.createElement('div');
   chartDiv.className = 'mermaid-chart-content';
   Object.assign(chartDiv.style, {
-    width: '100%',
+    width: 'max-content',
+    minWidth: '100%',
     minHeight: '100%',
     display: 'flex',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'flex-start',
     padding: '20px',
     boxSizing: 'border-box'
@@ -197,13 +198,13 @@ function processSvgElement(svgElement, chartContainer) {
     svgElement.setAttribute('viewBox', `0 0 ${originalWidth} ${originalHeight}`);
   }
 
-  svgElement.removeAttribute('width');
-  svgElement.removeAttribute('height');
-  svgElement.style.width = 'auto';
-  svgElement.style.minWidth = '100%';
-  svgElement.style.maxWidth = 'none';
-  svgElement.style.height = 'auto';
+  // 원래 크기(px)를 스타일로 적용하여 자동 축소 방지
+  if (originalHeight) svgElement.style.height = originalHeight.endsWith('px') ? originalHeight : `${originalHeight}px`;
+  if (originalWidth) svgElement.style.width = originalWidth.endsWith('px') ? originalWidth : `${originalWidth}px`;
+
   svgElement.style.display = 'block';
+  svgElement.style.maxWidth = 'none'; // 가로 제한 해제
+  svgElement.style.minWidth = 'auto'; // 강제 확장 해제
 
   const style = document.createElement('style');
   style.textContent = `
