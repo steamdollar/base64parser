@@ -194,17 +194,47 @@ function processSvgElement(svgElement, chartContainer) {
   const originalWidth = svgElement.getAttribute('width');
   const originalHeight = svgElement.getAttribute('height');
 
-  if (!svgElement.getAttribute('viewBox') && originalWidth && originalHeight) {
-    svgElement.setAttribute('viewBox', `0 0 ${originalWidth} ${originalHeight}`);
+  // viewBox에서 실제 픽셀 차원 추출 (Mermaid가 width="100%"를 적용하는 경우 대비)
+  const viewBox = svgElement.getAttribute('viewBox');
+  let viewWidth = originalWidth;
+  let viewHeight = originalHeight;
+
+  if (viewBox) {
+    const pts = viewBox.split(/[\s,]+/);
+    if (pts.length === 4) {
+      viewWidth = pts[2];
+      viewHeight = pts[3];
+    }
   }
 
-  // 원래 크기(px)를 스타일로 적용하여 자동 축소 방지
-  if (originalHeight) svgElement.style.height = originalHeight.endsWith('px') ? originalHeight : `${originalHeight}px`;
-  if (originalWidth) svgElement.style.width = originalWidth.endsWith('px') ? originalWidth : `${originalWidth}px`;
+  // 컨테이너 높이에 맞춰 비례 확대로 세로 공간 채우기
+  if (chartContainer && viewHeight) {
+    const containerHeight = chartContainer.clientHeight - 120; // 패딩(70+40) 및 여유분 고려
+    const vHeight = parseFloat(viewHeight);
+    const vWidth = parseFloat(viewWidth);
+
+    // 차트가 컨테이너보다 작을 경우에만 확대
+    if (vHeight < containerHeight) {
+      const ratio = containerHeight / vHeight;
+      viewHeight = containerHeight;
+      viewWidth = vWidth * ratio;
+    }
+  }
+
+  // 계산된 크기(px)를 스타일로 적용하여 자동 축소 방지 (!important로 강제 적용)
+  if (viewHeight) {
+    const heightVal = String(viewHeight).endsWith('px') ? viewHeight : `${viewHeight}px`;
+    svgElement.style.setProperty('height', heightVal, 'important');
+  }
+  if (viewWidth) {
+    const widthVal = String(viewWidth).endsWith('px') ? viewWidth : `${viewWidth}px`;
+    svgElement.style.setProperty('width', widthVal, 'important');
+    svgElement.style.setProperty('min-width', widthVal, 'important');
+  }
 
   svgElement.style.display = 'block';
-  svgElement.style.maxWidth = 'none'; // 가로 제한 해제
-  svgElement.style.minWidth = 'auto'; // 강제 확장 해제
+  svgElement.style.setProperty('max-width', 'none', 'important'); // 가로 제한 강제 해제
+  svgElement.style.flexShrink = '0'; // Flexbox 환경에서 축소 방지
 
   const style = document.createElement('style');
   style.textContent = `
@@ -274,7 +304,7 @@ function downloadSvg(chartDiv) {
 }
 
 // 오버레이 이벤트 설정
-function setupOverlayEvents(overlay) {
+function setupOverlayEvents(overlay, chartContainer) {
   // 오버레이 바깥 클릭 시 닫기
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) {
@@ -290,6 +320,21 @@ function setupOverlayEvents(overlay) {
     }
   };
   document.addEventListener('keydown', handleEscape);
+
+  // 마우스 휠로 가로 스크롤 가능하게 처리 (세로 스크롤이 없을 때만)
+  if (chartContainer) {
+    chartContainer.addEventListener('wheel', (e) => {
+      const isHorizontalOverflow = chartContainer.scrollWidth > chartContainer.clientWidth;
+      const isVerticalOverflow = chartContainer.scrollHeight > chartContainer.clientHeight;
+
+      // 수직 스크롤이 없고 가로 스크롤만 있을 때만 휠을 가로로 전환
+      if (e.deltaY !== 0 && isHorizontalOverflow && !isVerticalOverflow) {
+        e.preventDefault();
+        chartContainer.scrollLeft += e.deltaY;
+      }
+      // 세로 스크롤이 있는 경우에는 브라우저 기본 동작(수직 스크롤)을 따름
+    }, { passive: false });
+  }
 }
 
 // 머메이드 차트 오버레이 표시 함수 (메인)
@@ -350,5 +395,5 @@ async function showMermaidOverlay(mermaidCode) {
   document.body.appendChild(overlay);
 
   // 이벤트 설정
-  setupOverlayEvents(overlay);
+  setupOverlayEvents(overlay, chartContainer);
 }
