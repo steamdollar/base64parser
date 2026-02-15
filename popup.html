@@ -275,6 +275,92 @@
       font-family: monospace;
       white-space: pre-wrap;
     }
+
+    /* 레버리지 계산기 스타일 */
+    .leverage-row {
+      background: #f9f9f9;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 8px;
+    }
+
+    .leverage-row-header {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .leverage-row-header select {
+      padding: 6px;
+      font-size: 12px;
+      border-radius: 4px;
+    }
+
+    .leverage-row-header input {
+      width: 70px;
+      padding: 6px;
+      font-size: 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      text-align: right;
+    }
+
+    .leverage-row-header span {
+      font-size: 11px;
+      color: #666;
+    }
+
+    .leverage-row-result {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      padding-top: 6px;
+      border-top: 1px dashed #ddd;
+    }
+
+    .leverage-row-result .tp,
+    .leverage-row-result .sl {
+      font-weight: bold;
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 3px;
+      transition: background-color 0.15s;
+    }
+
+    .leverage-row-result .tp {
+      color: #4CAF50;
+    }
+
+    .leverage-row-result .sl {
+      color: #f44336;
+    }
+
+    .leverage-row-result .tp:hover,
+    .leverage-row-result .sl:hover {
+      background-color: rgba(0, 0, 0, 0.08);
+    }
+
+    .leverage-row-result .tp.copied,
+    .leverage-row-result .sl.copied {
+      background-color: rgba(33, 150, 243, 0.2);
+    }
+
+    .leverage-row-result .delete-row-btn {
+      padding: 4px 8px;
+      font-size: 11px;
+      background-color: #ff6b6b;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    .leverage-row-result .delete-row-btn:hover {
+      background-color: #ee5a5a;
+    }
   </style>
 </head>
 
@@ -295,6 +381,7 @@
       <button class="tab-button active" data-tab="base64">Base64</button>
       <button class="tab-button" data-tab="fetch">Fetch</button>
       <button class="tab-button" data-tab="mermaid">Mermaid</button>
+      <button class="tab-button" data-tab="leverage">Leverage</button>
       <button class="tab-button" data-tab="memo">Memo</button>
       <button class="tab-button" data-tab="settings">Settings</button>
     </div>
@@ -368,6 +455,17 @@
             style="max-width: 100%; border: 1px solid #ddd; border-radius: 4px; background: white;" />
         </div>
         <div id="mermaidStatus" style="margin-top: 10px; font-size: 12px; color: #666; text-align: center;"></div>
+      </div>
+
+      <div id="leverage-tab" class="tab-panel">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <label style="margin: 0;">레버리지 계산기</label>
+          <button id="addLeverageRow" style="padding: 6px 12px; font-size: 12px;">+ 거래 추가</button>
+        </div>
+        <div id="leverageRows">
+          <!-- 동적으로 거래 행 추가됨 -->
+        </div>
+        <div id="leverageStatus" style="margin-top: 10px; font-size: 12px; color: #666; text-align: center;"></div>
       </div>
 
       <div id="memo-tab" class="tab-panel">

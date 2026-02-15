@@ -8,6 +8,7 @@ import { getSync, setSync, getLocal, setLocal } from './modules/storage.js';
 import { getAllMemos, getMemo, saveMemo as saveMemoToStorage, deleteMemo as deleteMemoFromStorage } from './modules/memo/index.js';
 import { COLORS, TIMING } from './modules/constants.js';
 import { showStatusMessage } from './modules/ui-utils.js';
+import { calculateTPSL, formatPrice, validateInputs } from './modules/leverage/index.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // 설정 관리자 초기화
@@ -526,5 +527,160 @@ document.addEventListener('DOMContentLoaded', () => {
     mermaidPreview.style.display = 'none';
     mermaidImage.src = '';
   });
+
+  // ===== 레버리지 계산기 기능 =====
+
+  const leverageRows = document.getElementById('leverageRows');
+  const addLeverageRow = document.getElementById('addLeverageRow');
+  const leverageStatus = document.getElementById('leverageStatus');
+  let rowIdCounter = 0;
+
+  // 모든 행 데이터를 스토리지에 저장
+  async function saveLeverageData() {
+    const rows = leverageRows.querySelectorAll('.leverage-row');
+    const data = [];
+    rows.forEach(row => {
+      data.push({
+        position: row.querySelector('.position-select').value,
+        entryPrice: row.querySelector('.entry-price').value,
+        leverage: row.querySelector('.leverage-input').value,
+        lossPercent: row.querySelector('.loss-percent').value
+      });
+    });
+    await setLocal({ leverageData: data });
+  }
+
+  // 거래 행 생성
+  function createLeverageRow(initialData = null) {
+    const rowId = ++rowIdCounter;
+    const row = document.createElement('div');
+    row.className = 'leverage-row';
+    row.id = `leverage-row-${rowId}`;
+
+    const position = initialData?.position || 'long';
+    const entryPrice = initialData?.entryPrice || '';
+    const leverage = initialData?.leverage || '10';
+    const lossPercent = initialData?.lossPercent || '5';
+
+    row.innerHTML = `
+      <div class="leverage-row-header">
+        <select class="position-select" data-row="${rowId}">
+          <option value="long" ${position === 'long' ? 'selected' : ''}>Long</option>
+          <option value="short" ${position === 'short' ? 'selected' : ''}>Short</option>
+        </select>
+        <input type="number" class="entry-price" data-row="${rowId}" placeholder="체결가" step="any" value="${entryPrice}">
+        <span>×</span>
+        <input type="number" class="leverage-input" data-row="${rowId}" placeholder="레버리지" value="${leverage}" min="1" max="125">
+        <span>배</span>
+        <input type="number" class="loss-percent" data-row="${rowId}" placeholder="손실율" value="${lossPercent}" min="0.1" max="100" step="0.1">
+        <span>%</span>
+      </div>
+      <div class="leverage-row-result">
+        <span>TP: <span class="tp" data-row="${rowId}">-</span></span>
+        <span>SL: <span class="sl" data-row="${rowId}">-</span></span>
+        <button class="delete-row-btn" data-row="${rowId}">삭제</button>
+      </div>
+    `;
+    leverageRows.appendChild(row);
+
+    // 입력값 변경 시 실시간 계산 + 저장
+    const inputs = row.querySelectorAll('input, select');
+    inputs.forEach(input => {
+      input.addEventListener('input', () => {
+        calculateRow(rowId);
+        saveLeverageData();
+      });
+      input.addEventListener('change', () => {
+        calculateRow(rowId);
+        saveLeverageData();
+      });
+    });
+
+    // 초기 데이터가 있으면 계산
+    if (initialData?.entryPrice) {
+      calculateRow(rowId);
+    }
+
+    return rowId;
+  }
+
+  // 행 계산
+  function calculateRow(rowId) {
+    const row = document.getElementById(`leverage-row-${rowId}`);
+    if (!row) return;
+
+    const position = row.querySelector('.position-select').value;
+    const entryPrice = parseFloat(row.querySelector('.entry-price').value);
+    const leverage = parseFloat(row.querySelector('.leverage-input').value);
+    const lossPercent = parseFloat(row.querySelector('.loss-percent').value);
+
+    const tpSpan = row.querySelector('.tp');
+    const slSpan = row.querySelector('.sl');
+
+    const validation = validateInputs(entryPrice, leverage, lossPercent);
+    if (!validation.valid) {
+      tpSpan.textContent = '-';
+      slSpan.textContent = '-';
+      return;
+    }
+
+    const result = calculateTPSL(entryPrice, leverage, lossPercent, position);
+
+    // 원본 가격의 소수점 자릿수 유지
+    const entryStr = entryPrice.toString();
+    const decimals = entryStr.includes('.') ? entryStr.split('.')[1].length : 0;
+
+    tpSpan.textContent = formatPrice(result.tp, decimals);
+    slSpan.textContent = formatPrice(result.sl, decimals);
+  }
+
+  // 거래 추가 버튼
+  addLeverageRow.addEventListener('click', () => {
+    createLeverageRow();
+    saveLeverageData();
+  });
+
+  // 행 삭제 + 가격 복사 (이벤트 위임)
+  leverageRows.addEventListener('click', async (e) => {
+    if (e.target.classList.contains('delete-row-btn')) {
+      const rowId = e.target.getAttribute('data-row');
+      const row = document.getElementById(`leverage-row-${rowId}`);
+      if (row) {
+        row.remove();
+        await saveLeverageData();
+      }
+    }
+
+    // TP/SL 가격 클릭 시 복사
+    if (e.target.classList.contains('tp') || e.target.classList.contains('sl')) {
+      const price = e.target.textContent;
+      if (price && price !== '-') {
+        // 천단위 구분자 제거 후 복사
+        const cleanPrice = price.replace(/,/g, '');
+        await navigator.clipboard.writeText(cleanPrice);
+
+        // 복사 피드백
+        e.target.classList.add('copied');
+        const originalText = e.target.textContent;
+        e.target.textContent = '복사됨!';
+        setTimeout(() => {
+          e.target.textContent = originalText;
+          e.target.classList.remove('copied');
+        }, 500);
+      }
+    }
+  });
+
+  // 저장된 데이터 로드
+  (async () => {
+    const result = await getLocal(['leverageData']);
+    const savedData = result.leverageData;
+
+    if (savedData && savedData.length > 0) {
+      savedData.forEach(data => createLeverageRow(data));
+    } else {
+      createLeverageRow();
+    }
+  })();
 
 });
