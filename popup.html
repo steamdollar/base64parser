@@ -361,6 +361,46 @@
     .leverage-row-result .delete-row-btn:hover {
       background-color: #ee5a5a;
     }
+
+    /* 도움말 힌트 스타일 */
+    .tab-help {
+      background-color: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 4px;
+      padding: 8px 10px;
+      margin-bottom: 12px;
+      font-size: 11px;
+      color: #666;
+    }
+
+    .tab-help kbd {
+      background-color: #e9ecef;
+      border: 1px solid #dee2e6;
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-family: monospace;
+      font-size: 10px;
+      color: #495057;
+    }
+
+    .tab-help .help-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .tab-help .help-row + .help-row {
+      margin-top: 4px;
+    }
+
+    .tab-help code {
+      background-color: #e9ecef;
+      border-radius: 3px;
+      padding: 1px 4px;
+      font-family: monospace;
+      font-size: 10px;
+      color: #495057;
+    }
   </style>
 </head>
 
@@ -388,6 +428,16 @@
 
     <div class="tab-content">
       <div id="base64-tab" class="tab-panel active">
+        <div class="tab-help">
+          <div class="help-row">
+            <span>페이지 선택 텍스트 디코딩</span>
+            <span><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd></span>
+          </div>
+          <div class="help-row">
+            <span>팝업에서 실행</span>
+            <span><kbd>Ctrl</kbd>+<kbd>Enter</kbd></span>
+          </div>
+        </div>
         <div class="input-section">
           <label for="base64Input">Text Input:</label>
           <textarea id="base64Input" placeholder="Enter Base64 text or regular text here..."></textarea>
@@ -400,6 +450,12 @@
       </div>
 
       <div id="fetch-tab" class="tab-panel">
+        <div class="tab-help">
+          <div class="help-row">
+            <span>요청 전송</span>
+            <span><kbd>Ctrl</kbd>+<kbd>Enter</kbd></span>
+          </div>
+        </div>
         <div class="request-row">
           <select id="requestMethod">
             <option value="GET">GET</option>
@@ -424,6 +480,16 @@
       </div>
 
       <div id="mermaid-tab" class="tab-panel">
+        <div class="tab-help">
+          <div class="help-row">
+            <span>페이지에 오버레이 표시</span>
+            <span><kbd>Alt</kbd>+<kbd>Q</kbd></span>
+          </div>
+          <div class="help-row">
+            <span>팝업에서 렌더링</span>
+            <span><kbd>Ctrl</kbd>+<kbd>Enter</kbd></span>
+          </div>
+        </div>
         <div class="input-section">
           <label for="mermaidCode">Mermaid 차트 코드:</label>
           <textarea id="mermaidCode"
@@ -458,6 +524,11 @@
       </div>
 
       <div id="leverage-tab" class="tab-panel">
+        <div class="tab-help">
+          <div class="help-row">
+            <span>TP/SL 가격 클릭 시 클립보드 복사</span>
+          </div>
+        </div>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
           <label style="margin: 0;">레버리지 계산기</label>
           <button id="addLeverageRow" style="padding: 6px 12px; font-size: 12px;">+ 거래 추가</button>
@@ -469,6 +540,12 @@
       </div>
 
       <div id="memo-tab" class="tab-panel">
+        <div class="tab-help">
+          <div class="help-row">
+            <span>메모 저장</span>
+            <span><kbd>Ctrl</kbd>+<kbd>S</kbd></span>
+          </div>
+        </div>
         <div class="input-section">
           <label for="memoTitle">Title:</label>
           <input type="text" id="memoTitle" placeholder="Enter memo title (key)"
@@ -489,6 +566,11 @@
       </div>
 
       <div id="settings-tab" class="tab-panel">
+        <div class="tab-help">
+          <div class="help-row">
+            <span>단축키 변경: <code>chrome://extensions/shortcuts</code></span>
+          </div>
+        </div>
         <div class="settings-section">
           <h4>Default Settings</h4>
           <div class="input-section">
