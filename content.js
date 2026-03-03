@@ -57,6 +57,31 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
+// Mac 환경에서 Option+Q (Alt+Q) 단축키가 특수기호(œ) 등 입력기로 전용되어 
+// chrome.commands 가 무시되는 이슈를 해결하기 위한 전역 Fallback 로직
+document.addEventListener('keydown', (e) => {
+  // 사용자가 폼 요소에 타이핑 중일 때는 단축키 무시
+  const activeTag = document.activeElement ? document.activeElement.tagName : '';
+  const isEditable = document.activeElement ? document.activeElement.isContentEditable : false;
+  if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || isEditable) {
+    return;
+  }
+
+  // Alt(Option) 키가 눌린 상태에서 키 코드가 'KeyQ' 또는 문자 'q', 'œ' 가 입력된 경우
+  if (e.altKey && (e.code === 'KeyQ' || e.key.toLowerCase() === 'q' || e.key === 'œ')) {
+    e.preventDefault();
+    
+    // 선택된 텍스트 가져오기
+    const selectedText = window.getSelection().toString().trim();
+    if (selectedText) {
+      chrome.runtime.sendMessage({
+        action: "process_mermaid",
+        text: selectedText
+      });
+    }
+  }
+});
+
 // 알림 메시지 표시 함수
 function showNotification(message) {
   const oldNotification = document.getElementById('base64-decoder-notification');
