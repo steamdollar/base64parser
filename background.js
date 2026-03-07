@@ -182,7 +182,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               originalText: request.text,
               translatedText: result.translatedText,
               sourceLang: result.sourceLang,
-              targetLang: result.targetLang
+              targetLang: result.targetLang,
+              fromCache: result.fromCache || false
             }).catch(err => console.error('번역 결과 표시 실패:', err));
           } else {
             chrome.tabs.sendMessage(sender.tab.id, {

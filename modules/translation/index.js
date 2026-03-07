@@ -5,6 +5,49 @@
 
 const MYMEMORY_API = 'https://api.mymemory.translated.net/get';
 const MAX_TEXT_LENGTH = 500; // MyMemory 제한
+const CACHE_KEY = 'translationCache';
+const MAX_CACHE_SIZE = 500; // 최대 캐시 항목 수
+
+/**
+ * 캐시 키 생성
+ */
+function getCacheKey(text, sourceLang, targetLang) {
+  return `${text}:${sourceLang}:${targetLang}`;
+}
+
+/**
+ * 캐시에서 번역 결과 조회
+ */
+async function getCachedTranslation(text, sourceLang, targetLang) {
+  try {
+    const result = await chrome.storage.local.get([CACHE_KEY]);
+    const cache = result[CACHE_KEY] || {};
+    return cache[getCacheKey(text, sourceLang, targetLang)];
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 캐시에 번역 결과 저장
+ */
+async function setCachedTranslation(text, sourceLang, targetLang, translatedText) {
+  try {
+    const result = await chrome.storage.local.get([CACHE_KEY]);
+    const cache = result[CACHE_KEY] || {};
+
+    // 캐시 크기 제한 (FIFO)
+    const keys = Object.keys(cache);
+    if (keys.length >= MAX_CACHE_SIZE) {
+      delete cache[keys[0]];
+    }
+
+    cache[getCacheKey(text, sourceLang, targetLang)] = translatedText;
+    await chrome.storage.local.set({ [CACHE_KEY]: cache });
+  } catch {
+    // 캐시 저장 실패는 무시
+  }
+}
 
 /**
  * 텍스트 언어 감지 (간단한 휴리스틱)
@@ -52,6 +95,18 @@ export async function translateText(text, sourceLang = 'auto', targetLang = 'ko'
     targetLang = getTargetLanguage(detectedLang);
   }
 
+  // 캐시 체크
+  const cached = await getCachedTranslation(text, detectedLang, targetLang);
+  if (cached) {
+    return {
+      success: true,
+      translatedText: cached,
+      sourceLang: detectedLang,
+      targetLang: targetLang,
+      fromCache: true
+    };
+  }
+
   try {
     const url = `${MYMEMORY_API}?q=${encodeURIComponent(text)}&langpair=${detectedLang}|${targetLang}`;
     const response = await fetch(url);
@@ -63,9 +118,14 @@ export async function translateText(text, sourceLang = 'auto', targetLang = 'ko'
     const data = await response.json();
 
     if (data.responseStatus === 200 && data.responseData?.translatedText) {
+      const translatedText = data.responseData.translatedText;
+
+      // 캐시 저장
+      await setCachedTranslation(text, detectedLang, targetLang, translatedText);
+
       return {
         success: true,
-        translatedText: data.responseData.translatedText,
+        translatedText: translatedText,
         sourceLang: detectedLang,
         targetLang: targetLang
       };

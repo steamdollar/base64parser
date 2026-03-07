@@ -66,7 +66,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
   } else if (request.action === "show_translation_result") {
     // 번역 결과 토스트 표시
-    showTranslationToast(request.originalText, request.translatedText);
+    showTranslationToast(request.originalText, request.translatedText, request.fromCache);
   }
 });
 
@@ -131,7 +131,7 @@ function showNotification(message) {
 }
 
 // 번역 결과 토스트 표시 함수
-function showTranslationToast(originalText, translatedText) {
+function showTranslationToast(originalText, translatedText, fromCache = false) {
   // 기존 토스트 제거
   const oldToast = document.getElementById('translation-toast');
   if (oldToast) {
@@ -144,14 +144,20 @@ function showTranslationToast(originalText, translatedText) {
   // 텍스트 길이에 따라 최대 너비 조정
   const maxWidth = Math.min(400, window.innerWidth * 0.8);
 
+  // 캐시 여부에 따라 배경색 변경
+  const bgColor = fromCache
+    ? 'rgba(27, 94, 32, 0.92)'  // 초록색 (캐시)
+    : 'rgba(0, 0, 0, 0.92)';    // 검은색 (API)
+
   Object.assign(toast.style, {
     position: 'fixed',
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    backgroundColor: 'rgba(0, 0, 0, 0.92)',
+    backgroundColor: bgColor,
     color: 'white',
     padding: '16px 20px',
+    paddingRight: '32px', // 닫기 버튼 공간
     borderRadius: '12px',
     boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
     zIndex: '2147483647',
@@ -162,6 +168,39 @@ function showTranslationToast(originalText, translatedText) {
     wordBreak: 'break-word',
     transition: 'opacity 0.5s ease-out',
     opacity: '1'
+  });
+
+  // 닫기 버튼
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕';
+  Object.assign(closeBtn.style, {
+    position: 'absolute',
+    top: '8px',
+    right: '8px',
+    background: 'transparent',
+    border: 'none',
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontSize: '14px',
+    cursor: 'pointer',
+    padding: '2px 6px',
+    borderRadius: '4px',
+    transition: 'color 0.2s, background-color 0.2s'
+  });
+  closeBtn.addEventListener('mouseenter', () => {
+    closeBtn.style.color = 'white';
+    closeBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+  });
+  closeBtn.addEventListener('mouseleave', () => {
+    closeBtn.style.color = 'rgba(255, 255, 255, 0.5)';
+    closeBtn.style.backgroundColor = 'transparent';
+  });
+  closeBtn.addEventListener('click', () => {
+    toast.style.opacity = '0';
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.remove();
+      }
+    }, 300);
   });
 
   // 원문 (짧게 표시)
@@ -186,20 +225,41 @@ function showTranslationToast(originalText, translatedText) {
     lineHeight: '1.5'
   });
 
+  toast.appendChild(closeBtn);
   toast.appendChild(originalDiv);
   toast.appendChild(translatedDiv);
   document.body.appendChild(toast);
 
-  // 2.5초 후 fade-out 시작
-  setTimeout(() => {
-    toast.style.opacity = '0';
-    // fade-out 완료 후 제거
-    setTimeout(() => {
-      if (toast.parentNode) {
-        toast.remove();
+  // 마우스 호버 시 타이머 정지
+  let fadeOutTimer = null;
+  let isHovered = false;
+
+  const startFadeOutTimer = () => {
+    if (fadeOutTimer) clearTimeout(fadeOutTimer);
+    fadeOutTimer = setTimeout(() => {
+      if (!isHovered) {
+        toast.style.opacity = '0';
+        setTimeout(() => {
+          if (toast.parentNode) {
+            toast.remove();
+          }
+        }, 500);
       }
-    }, 500);
-  }, 2500);
+    }, 5000);
+  };
+
+  toast.addEventListener('mouseenter', () => {
+    isHovered = true;
+    if (fadeOutTimer) clearTimeout(fadeOutTimer);
+  });
+
+  toast.addEventListener('mouseleave', () => {
+    isHovered = false;
+    startFadeOutTimer();
+  });
+
+  // 최초 타이머 시작
+  startFadeOutTimer();
 }
 
 // ===== Mermaid 오버레이 관련 상수 및 헬퍼 함수들 =====
