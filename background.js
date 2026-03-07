@@ -1,6 +1,7 @@
 // 모듈 import
 import { decodeText, isImageBase64 } from './modules/base64/index.js';
 import { isMermaidCode, renderMermaidChart } from './modules/mermaid/index.js';
+import { translateText, detectLanguage, getTargetLanguage } from './modules/translation/index.js';
 
 // Storage API 헬퍼 함수
 async function getSync(keys) {
@@ -139,6 +140,9 @@ chrome.commands.onCommand.addListener(async (command) => {
   } else if (command === "show-mermaid") {
     chrome.tabs.sendMessage(tab.id, { action: "get_selection_for_mermaid" })
       .catch(err => console.error('Mermaid 메시지 전송 실패:', err));
+  } else if (command === "translate-selection") {
+    chrome.tabs.sendMessage(tab.id, { action: "get_selection_for_translation" })
+      .catch(err => console.error('번역 메시지 전송 실패:', err));
   }
 });
 
@@ -162,6 +166,35 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         } else {
           chrome.tabs.sendMessage(sender.tab.id, { action: "show_error", text: "Mermaid 코드가 아닙니다" })
             .catch(err => console.error('에러 메시지 표시 실패:', err));
+        }
+        break;
+
+      // 번역 처리 요청
+      case "process_translation":
+        try {
+          const sourceLang = detectLanguage(request.text);
+          const targetLang = getTargetLanguage(sourceLang);
+          const result = await translateText(request.text, sourceLang, targetLang);
+
+          if (result.success) {
+            chrome.tabs.sendMessage(sender.tab.id, {
+              action: "show_translation_result",
+              originalText: request.text,
+              translatedText: result.translatedText,
+              sourceLang: result.sourceLang,
+              targetLang: result.targetLang
+            }).catch(err => console.error('번역 결과 표시 실패:', err));
+          } else {
+            chrome.tabs.sendMessage(sender.tab.id, {
+              action: "show_error",
+              text: result.error
+            }).catch(err => console.error('에러 메시지 표시 실패:', err));
+          }
+        } catch (error) {
+          chrome.tabs.sendMessage(sender.tab.id, {
+            action: "show_error",
+            text: `번역 오류: ${error.message}`
+          }).catch(err => console.error('에러 메시지 표시 실패:', err));
         }
         break;
     }

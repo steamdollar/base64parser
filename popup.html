@@ -118,29 +118,31 @@
 
     .tab-container {
       margin-top: 15px;
+      overflow: visible;
     }
 
     .tab-buttons {
       display: flex;
       border-bottom: 1px solid #ddd;
       margin-bottom: 15px;
+      position: relative;
+      padding-top: 8px;
     }
 
     .tab-button {
       flex: 1;
-      padding: 10px 10px;
+      padding: 10px 8px;
       background-color: #f5f5f5;
       border: none;
       border-bottom: 2px solid transparent;
       cursor: pointer;
-      font-size: 13px;
-      font-weight: bold;
+      font-size: 16px;
       color: #666;
+      position: relative;
     }
 
     .tab-button.active {
       background-color: white;
-      color: #2196F3;
       border-bottom-color: #2196F3;
     }
 
@@ -150,6 +152,30 @@
 
     .tab-button.active:hover {
       background-color: white;
+    }
+
+    .tab-button::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      top: -28px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #333;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s, visibility 0.2s;
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    .tab-button:hover::after {
+      opacity: 1;
+      visibility: visible;
     }
 
     .tab-panel {
@@ -418,12 +444,13 @@
 
   <div class="tab-container">
     <div class="tab-buttons">
-      <button class="tab-button active" data-tab="base64">Base64</button>
-      <button class="tab-button" data-tab="fetch">Fetch</button>
-      <button class="tab-button" data-tab="mermaid">Mermaid</button>
-      <button class="tab-button" data-tab="leverage">Leverage</button>
-      <button class="tab-button" data-tab="memo">Memo</button>
-      <button class="tab-button" data-tab="settings">Settings</button>
+      <button class="tab-button active" data-tab="base64" data-tooltip="Base64">🔐</button>
+      <button class="tab-button" data-tab="fetch" data-tooltip="Fetch">🌐</button>
+      <button class="tab-button" data-tab="mermaid" data-tooltip="Mermaid">📊</button>
+      <button class="tab-button" data-tab="translate" data-tooltip="Translate">🗣️</button>
+      <button class="tab-button" data-tab="leverage" data-tooltip="Leverage">💹</button>
+      <button class="tab-button" data-tab="memo" data-tooltip="Memo">📝</button>
+      <button class="tab-button" data-tab="settings" data-tooltip="Settings">⚙️</button>
     </div>
 
     <div class="tab-content">
@@ -521,6 +548,38 @@
             style="max-width: 100%; border: 1px solid #ddd; border-radius: 4px; background: white;" />
         </div>
         <div id="mermaidStatus" style="margin-top: 10px; font-size: 12px; color: #666; text-align: center;"></div>
+      </div>
+
+      <div id="translate-tab" class="tab-panel">
+        <div class="tab-help">
+          <div class="help-row">
+            <span>페이지 선택 텍스트 번역</span>
+            <span><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd></span>
+          </div>
+          <div class="help-row">
+            <span>팝업에서 번역</span>
+            <span><kbd>Ctrl</kbd>+<kbd>Enter</kbd></span>
+          </div>
+        </div>
+        <div class="input-section">
+          <label for="translateInput">번역할 텍스트:</label>
+          <textarea id="translateInput" placeholder="번역할 텍스트를 입력하세요..."></textarea>
+        </div>
+        <div class="request-row">
+          <select id="translateDirection" style="flex: 1; padding: 8px;">
+            <option value="auto">자동 감지 → 한국어/영어</option>
+            <option value="en-ko">영어 → 한국어</option>
+            <option value="ko-en">한국어 → 영어</option>
+            <option value="ja-ko">일본어 → 한국어</option>
+            <option value="zh-ko">중국어 → 한국어</option>
+          </select>
+        </div>
+        <button id="translateButton">🌐 번역</button>
+        <div id="translateResult" style="margin-top: 15px; display: none;">
+          <label style="font-weight: bold;">번역 결과:</label>
+          <div id="translateOutput" style="margin-top: 8px; padding: 12px; background-color: #e3f2fd; border-radius: 6px; font-size: 14px; line-height: 1.6; word-break: break-word;"></div>
+        </div>
+        <div id="translateStatus" style="margin-top: 10px; font-size: 12px; color: #666; text-align: center;"></div>
       </div>
 
       <div id="leverage-tab" class="tab-panel">

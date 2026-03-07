@@ -9,6 +9,7 @@ import { getAllMemos, getMemo, saveMemo as saveMemoToStorage, deleteMemo as dele
 import { COLORS, TIMING } from './modules/constants.js';
 import { showStatusMessage } from './modules/ui-utils.js';
 import { calculateTPSL, formatPrice, validateInputs } from './modules/leverage/index.js';
+import { translateText, detectLanguage, getTargetLanguage } from './modules/translation/index.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // 설정 관리자 초기화
@@ -682,5 +683,73 @@ document.addEventListener('DOMContentLoaded', () => {
       createLeverageRow();
     }
   })();
+
+  // ===== 번역 기능 =====
+
+  const translateInput = document.getElementById('translateInput');
+  const translateDirection = document.getElementById('translateDirection');
+  const translateButton = document.getElementById('translateButton');
+  const translateResult = document.getElementById('translateResult');
+  const translateOutput = document.getElementById('translateOutput');
+  const translateStatus = document.getElementById('translateStatus');
+
+  // 번역 버튼 클릭
+  translateButton.addEventListener('click', async () => {
+    const text = translateInput.value.trim();
+
+    if (!text) {
+      showStatusMessage(translateStatus, '⚠️ 번역할 텍스트를 입력해주세요.', 'error');
+      return;
+    }
+
+    translateButton.textContent = '번역 중...';
+    translateButton.disabled = true;
+
+    try {
+      let sourceLang, targetLang;
+      const direction = translateDirection.value;
+
+      if (direction === 'auto') {
+        sourceLang = detectLanguage(text);
+        targetLang = getTargetLanguage(sourceLang);
+      } else {
+        [sourceLang, targetLang] = direction.split('-');
+      }
+
+      const result = await translateText(text, sourceLang, targetLang);
+
+      if (result.success) {
+        translateOutput.textContent = result.translatedText;
+        translateResult.style.display = 'block';
+        showStatusMessage(translateStatus, `✓ ${sourceLang.toUpperCase()} → ${targetLang.toUpperCase()} 번역 완료`, 'success');
+      } else {
+        showStatusMessage(translateStatus, `✗ ${result.error}`, 'error');
+        translateResult.style.display = 'none';
+      }
+    } catch (error) {
+      showStatusMessage(translateStatus, `✗ 오류: ${error.message}`, 'error');
+      translateResult.style.display = 'none';
+    }
+
+    translateButton.textContent = '🌐 번역';
+    translateButton.disabled = false;
+  });
+
+  // Ctrl+Enter로 번역
+  translateInput.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'Enter') {
+      e.preventDefault();
+      translateButton.click();
+    }
+  });
+
+  // 번역 결과 클릭 시 복사
+  translateOutput.addEventListener('click', async () => {
+    const text = translateOutput.textContent;
+    if (text) {
+      await navigator.clipboard.writeText(text);
+      showStatusMessage(translateStatus, '✓ 클립보드에 복사됨', 'success');
+    }
+  });
 
 });

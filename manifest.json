@@ -50,6 +50,12 @@
         "default": "Alt+Q"
       },
       "description": "Show Mermaid Chart Overlay"
+    },
+    "translate-selection": {
+      "suggested_key": {
+        "default": "Alt+Shift+T"
+      },
+      "description": "Translate selected text"
     }
   },
   "web_accessible_resources": [

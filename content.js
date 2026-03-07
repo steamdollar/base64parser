@@ -54,6 +54,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         text: selectedText
       });
     }
+  } else if (request.action === "get_selection_for_translation") {
+    // 선택된 텍스트 가져오기 (번역용)
+    const selectedText = window.getSelection().toString().trim();
+    if (selectedText) {
+      // background.js로 선택된 텍스트 전달
+      chrome.runtime.sendMessage({
+        action: "process_translation",
+        text: selectedText
+      });
+    }
+  } else if (request.action === "show_translation_result") {
+    // 번역 결과 토스트 표시
+    showTranslationToast(request.originalText, request.translatedText);
   }
 });
 
@@ -115,6 +128,78 @@ function showNotification(message) {
       notification.remove();
     }
   }, 1500);
+}
+
+// 번역 결과 토스트 표시 함수
+function showTranslationToast(originalText, translatedText) {
+  // 기존 토스트 제거
+  const oldToast = document.getElementById('translation-toast');
+  if (oldToast) {
+    oldToast.remove();
+  }
+
+  const toast = document.createElement('div');
+  toast.id = 'translation-toast';
+
+  // 텍스트 길이에 따라 최대 너비 조정
+  const maxWidth = Math.min(400, window.innerWidth * 0.8);
+
+  Object.assign(toast.style, {
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    backgroundColor: 'rgba(0, 0, 0, 0.92)',
+    color: 'white',
+    padding: '16px 20px',
+    borderRadius: '12px',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+    zIndex: '2147483647',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontSize: '14px',
+    maxWidth: maxWidth + 'px',
+    minWidth: '200px',
+    wordBreak: 'break-word',
+    transition: 'opacity 0.5s ease-out',
+    opacity: '1'
+  });
+
+  // 원문 (짧게 표시)
+  const originalDiv = document.createElement('div');
+  const displayOriginal = originalText.length > 50 ? originalText.substring(0, 50) + '...' : originalText;
+  originalDiv.textContent = displayOriginal;
+  Object.assign(originalDiv.style, {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: '12px',
+    marginBottom: '8px',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+    paddingBottom: '8px'
+  });
+
+  // 번역문
+  const translatedDiv = document.createElement('div');
+  translatedDiv.textContent = translatedText;
+  Object.assign(translatedDiv.style, {
+    color: '#4FC3F7',
+    fontSize: '15px',
+    fontWeight: '500',
+    lineHeight: '1.5'
+  });
+
+  toast.appendChild(originalDiv);
+  toast.appendChild(translatedDiv);
+  document.body.appendChild(toast);
+
+  // 2.5초 후 fade-out 시작
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    // fade-out 완료 후 제거
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.remove();
+      }
+    }, 500);
+  }, 2500);
 }
 
 // ===== Mermaid 오버레이 관련 상수 및 헬퍼 함수들 =====
