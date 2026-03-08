@@ -56,7 +56,9 @@ async function setCachedTranslation(text, sourceLang, targetLang, translatedText
  */
 export function detectLanguage(text) {
   if (/[가-힣]/.test(text)) return 'ko';
-  if (/[ひらがなカタカナ\u4e00-\u9faf]/.test(text) && /[ひらがなカタカナ]/.test(text)) return 'ja';
+  // 히라가나(\u3040-\u309f) 또는 가타카나(\u30a0-\u30ff) 포함 시 일본어
+  if (/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return 'ja';
+  // 한자만 있으면 중국어 (일본어는 위에서 이미 걸러짐)
   if (/[\u4e00-\u9faf]/.test(text)) return 'zh';
   return 'en';
 }
