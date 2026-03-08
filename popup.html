@@ -427,6 +427,78 @@
       font-size: 10px;
       color: #495057;
     }
+
+    /* 도움말 섹션 스타일 */
+    .help-section h4 {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .help-toggle-icon {
+      font-size: 12px;
+      transition: transform 0.2s;
+    }
+
+    .help-toggle.open .help-toggle-icon {
+      transform: rotate(180deg);
+    }
+
+    .help-content {
+      margin-top: 10px;
+    }
+
+    .help-category {
+      background-color: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 8px;
+    }
+
+    .help-category:last-child {
+      margin-bottom: 0;
+    }
+
+    .help-title {
+      font-weight: bold;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .help-desc {
+      font-size: 11px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+
+    .help-shortcuts {
+      background-color: #fff;
+      border-radius: 4px;
+      padding: 6px 8px;
+    }
+
+    .help-shortcut-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      padding: 3px 0;
+    }
+
+    .help-shortcut-row + .help-shortcut-row {
+      border-top: 1px dashed #eee;
+    }
+
+    .help-shortcuts kbd {
+      background-color: #e9ecef;
+      border: 1px solid #dee2e6;
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-family: monospace;
+      font-size: 10px;
+      color: #495057;
+    }
   </style>
 </head>
 
@@ -630,6 +702,87 @@
             <span>단축키 변경: <code>chrome://extensions/shortcuts</code></span>
           </div>
         </div>
+
+        <div class="settings-section help-section">
+          <h4 class="help-toggle" style="cursor: pointer; user-select: none;">
+            📖 도움말 <span class="help-toggle-icon">▼</span>
+          </h4>
+          <div class="help-content" style="display: none;">
+            <div class="help-category">
+              <div class="help-title">🔐 Base64</div>
+              <div class="help-desc">Base64 인코딩/디코딩, JWT 자동 파싱, 이미지 감지</div>
+              <div class="help-shortcuts">
+                <div class="help-shortcut-row">
+                  <span>페이지 선택 텍스트 디코딩</span>
+                  <span><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd></span>
+                </div>
+                <div class="help-shortcut-row">
+                  <span>팝업에서 실행</span>
+                  <span><kbd>Ctrl</kbd>+<kbd>Enter</kbd></span>
+                </div>
+              </div>
+            </div>
+            <div class="help-category">
+              <div class="help-title">🌐 Fetch</div>
+              <div class="help-desc">HTTP API 테스트 (GET, POST, PUT, DELETE, PATCH)</div>
+              <div class="help-shortcuts">
+                <div class="help-shortcut-row">
+                  <span>요청 전송</span>
+                  <span><kbd>Ctrl</kbd>+<kbd>Enter</kbd></span>
+                </div>
+              </div>
+            </div>
+            <div class="help-category">
+              <div class="help-title">📊 Mermaid</div>
+              <div class="help-desc">Mermaid 차트 시각화 (클라이언트 사이드 렌더링)</div>
+              <div class="help-shortcuts">
+                <div class="help-shortcut-row">
+                  <span>페이지에 오버레이 표시</span>
+                  <span><kbd>Alt</kbd>+<kbd>Q</kbd></span>
+                </div>
+                <div class="help-shortcut-row">
+                  <span>팝업에서 렌더링</span>
+                  <span><kbd>Ctrl</kbd>+<kbd>Enter</kbd></span>
+                </div>
+              </div>
+            </div>
+            <div class="help-category">
+              <div class="help-title">🗣️ Translate</div>
+              <div class="help-desc">다국어 번역 (한/영/일/중 지원)</div>
+              <div class="help-shortcuts">
+                <div class="help-shortcut-row">
+                  <span>페이지 선택 텍스트 번역</span>
+                  <span><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd></span>
+                </div>
+                <div class="help-shortcut-row">
+                  <span>팝업에서 번역</span>
+                  <span><kbd>Ctrl</kbd>+<kbd>Enter</kbd></span>
+                </div>
+              </div>
+            </div>
+            <div class="help-category">
+              <div class="help-title">💹 Leverage</div>
+              <div class="help-desc">레버리지 계산기 (TP/SL 자동 계산)</div>
+              <div class="help-shortcuts">
+                <div class="help-shortcut-row">
+                  <span>TP/SL 가격 복사</span>
+                  <span>클릭</span>
+                </div>
+              </div>
+            </div>
+            <div class="help-category">
+              <div class="help-title">📝 Memo</div>
+              <div class="help-desc">K-V 저장소 메모 관리</div>
+              <div class="help-shortcuts">
+                <div class="help-shortcut-row">
+                  <span>메모 저장</span>
+                  <span><kbd>Ctrl</kbd>+<kbd>S</kbd></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="settings-section">
           <h4>Default Settings</h4>
           <div class="input-section">

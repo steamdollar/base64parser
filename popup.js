@@ -322,6 +322,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 설정 관련 이벤트 핸들러들
 
+  // 도움말 토글
+  const helpToggle = document.querySelector('.help-toggle');
+  const helpContent = document.querySelector('.help-content');
+  if (helpToggle && helpContent) {
+    helpToggle.addEventListener('click', () => {
+      const isOpen = helpContent.style.display !== 'none';
+      helpContent.style.display = isOpen ? 'none' : 'block';
+      helpToggle.classList.toggle('open', !isOpen);
+    });
+  }
+
   // 토큰 가시성 토글
   toggleTokenVisibility.addEventListener('click', () => {
     const isPassword = accessToken.type === 'password';
