@@ -64,6 +64,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         text: selectedText
       });
     }
+  } else if (request.action === "get_selection_for_memo") {
+    // 선택된 텍스트 가져오기 (메모용)
+    const selectedText = window.getSelection().toString().trim();
+    if (selectedText) {
+      showMemoModal(selectedText);
+    } else {
+      showNotification("✗ 저장할 텍스트를 먼저 선택해주세요.");
+    }
+  } else if (request.action === "show_notification") {
+    // 범용 알림 표시
+    showNotification(request.text);
   } else if (request.action === "show_translation_result") {
     // 번역 결과 토스트 표시
     showTranslationToast(request.originalText, request.translatedText, request.fromCache);
@@ -260,6 +271,152 @@ function showTranslationToast(originalText, translatedText, fromCache = false) {
 
   // 최초 타이머 시작
   startFadeOutTimer();
+}
+
+// ===== 메모 저장 모달 관련 =====
+
+function showMemoModal(content) {
+  const oldModal = document.getElementById('memo-save-overlay');
+  if (oldModal) oldModal.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'memo-save-overlay';
+  Object.assign(overlay.style, {
+    position: 'fixed',
+    top: '0',
+    left: '0',
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    zIndex: '2147483647',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backdropFilter: 'blur(3px)'
+  });
+
+  const modal = document.createElement('div');
+  Object.assign(modal.style, {
+    backgroundColor: '#fff',
+    padding: '24px',
+    borderRadius: '12px',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+    width: '320px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+  });
+
+  const titleRow = document.createElement('div');
+  Object.assign(titleRow.style, { display: 'flex', justifyContent: 'space-between', alignItems: 'center' });
+  
+  const title = document.createElement('h3');
+  title.textContent = '메모 저장';
+  Object.assign(title.style, { margin: '0', fontSize: '18px', color: '#333', fontWeight: '600' });
+
+  const contentPreview = document.createElement('div');
+  contentPreview.textContent = content.length > 50 ? content.substring(0, 50) + '...' : content;
+  Object.assign(contentPreview.style, {
+    fontSize: '13px', color: '#666', backgroundColor: '#f5f5f5', 
+    padding: '8px 12px', borderRadius: '6px', fontStyle: 'italic',
+    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+  });
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.placeholder = '메모 이름을 입력하세요';
+  Object.assign(input.style, {
+    padding: '12px',
+    border: '1px solid #ddd',
+    borderRadius: '6px',
+    fontSize: '14px',
+    outline: 'none',
+    transition: 'border-color 0.2s'
+  });
+  input.addEventListener('focus', () => input.style.borderColor = '#2196F3');
+  input.addEventListener('blur', () => input.style.borderColor = '#ddd');
+
+  const btnContainer = document.createElement('div');
+  Object.assign(btnContainer.style, { display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '4px' });
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = '취소';
+  Object.assign(cancelBtn.style, {
+    padding: '8px 16px', border: 'none', background: '#f5f5f5', color: '#444',
+    borderRadius: '6px', cursor: 'pointer', transition: 'background 0.2s',
+    fontWeight: '500', fontSize: '14px'
+  });
+  cancelBtn.onclick = () => overlay.remove();
+  cancelBtn.onmouseenter = () => cancelBtn.style.background = '#e0e0e0';
+  cancelBtn.onmouseleave = () => cancelBtn.style.background = '#f5f5f5';
+
+  const saveBtn = document.createElement('button');
+  saveBtn.textContent = '저장';
+  Object.assign(saveBtn.style, {
+    padding: '8px 16px', border: 'none', background: '#2196F3', color: '#fff',
+    borderRadius: '6px', cursor: 'pointer', transition: 'background 0.2s',
+    fontWeight: '500', fontSize: '14px'
+  });
+  saveBtn.onmouseenter = () => saveBtn.style.background = '#1976D2';
+  saveBtn.onmouseleave = () => saveBtn.style.background = '#2196F3';
+
+  const doSave = () => {
+    const memoTitle = input.value.trim();
+    if (!memoTitle) {
+      input.style.borderColor = '#f44336';
+      input.style.animation = 'shake 0.4s';
+      setTimeout(() => input.style.animation = '', 400);
+      return;
+    }
+    chrome.runtime.sendMessage({
+      action: "save_new_memo",
+      title: memoTitle,
+      text: content
+    });
+    overlay.remove();
+  };
+
+  saveBtn.onclick = doSave;
+  input.addEventListener('keydown', (e) => {
+    e.stopPropagation(); // Stop document level shortcuts
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      doSave();
+    }
+    if (e.key === 'Escape') {
+      overlay.remove();
+    }
+  });
+
+  titleRow.append(title);
+  btnContainer.append(cancelBtn, saveBtn);
+  modal.append(titleRow, contentPreview, input, btnContainer);
+  overlay.append(modal);
+
+  // Click outside to close
+  overlay.addEventListener('mousedown', e => {
+    if (e.target === overlay) overlay.remove();
+  });
+
+  document.body.appendChild(overlay);
+  
+  // Add simple shake animation for empty input validation
+  if (!document.getElementById('memo-shake-style')) {
+    const style = document.createElement('style');
+    style.id = 'memo-shake-style';
+    style.textContent = `
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // Set focus with slight delay to ensure rendering
+  setTimeout(() => input.focus(), 10);
 }
 
 // ===== Mermaid 오버레이 관련 상수 및 헬퍼 함수들 =====

@@ -49,7 +49,7 @@ Base64 인코딩/디코딩, HTTP API 테스트, Mermaid 차트 시각화, 실시
 - **로컬 저장**: Chrome Local Storage에 안전하게 저장
 - **복사 기능**: 저장된 메모를 클립보드로 복사
 - **삭제 기능**: 불필요한 메모 삭제
-- **단축키**: `Ctrl+S`로 메모 저장
+- **단축키**: `Alt+Shift+S`로 페이지 텍스트 메모, `Ctrl+S`로 팝업 내 폼 메모 저장
 
 ### 7. ⚙️ 설정 및 도움말
 - **기본 설정 저장**: 기본 URL, 메서드, 헤더 및 복수 토큰 관리
@@ -82,8 +82,9 @@ Base64 인코딩/디코딩, HTTP API 테스트, Mermaid 차트 시각화, 실시
 | Base64 디코딩 | `Alt+Shift+D` | 선택한 텍스트를 Base64 디코딩 |
 | Mermaid 오버레이 | `Alt+Q` | 선택한 Mermaid 코드를 오버레이로 표시 |
 | 텍스트 번역 | `Alt+Shift+T` | 선택한 텍스트 번역 오버레이 표시 |
+| 페이지 메모 저장 | `Alt+Shift+S` | 선택한 텍스트를 메모로 저장 |
 | 전송/실행 (팝업) | `Ctrl+Enter` | Base64, Fetch, Mermaid, Translate에서 실행 |
-| 메모 저장 (팝업) | `Ctrl+S` | Memo 탭에서 메모 저장 |
+| 메모 저장 (팝업) | `Ctrl+S` | Memo 탭에서 폼 내용을 메모로 저장 |
 
 단축키 변경: `chrome://extensions/shortcuts`에서 수정 가능합니다.
 

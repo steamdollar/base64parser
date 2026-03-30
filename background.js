@@ -2,6 +2,7 @@
 import { decodeText, isImageBase64 } from './modules/base64/index.js';
 import { isMermaidCode, renderMermaidChart } from './modules/mermaid/index.js';
 import { translateText, detectLanguage, getTargetLanguage } from './modules/translation/index.js';
+import { saveMemo } from './modules/memo/index.js';
 
 // Storage API 헬퍼 함수
 async function getSync(keys) {
@@ -143,6 +144,9 @@ chrome.commands.onCommand.addListener(async (command) => {
   } else if (command === "translate-selection") {
     chrome.tabs.sendMessage(tab.id, { action: "get_selection_for_translation" })
       .catch(err => console.error('번역 메시지 전송 실패:', err));
+  } else if (command === "save-memo") {
+    chrome.tabs.sendMessage(tab.id, { action: "get_selection_for_memo" })
+      .catch(err => console.error('메모 저장 메시지 전송 실패:', err));
   }
 });
 
@@ -195,6 +199,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           chrome.tabs.sendMessage(sender.tab.id, {
             action: "show_error",
             text: `번역 오류: ${error.message}`
+          }).catch(err => console.error('에러 메시지 표시 실패:', err));
+        }
+        break;
+
+      // 메모 저장 처리 요청
+      case "save_new_memo":
+        try {
+          const success = await saveMemo(request.title, request.text);
+          chrome.tabs.sendMessage(sender.tab.id, {
+            action: "show_notification",
+            text: success ? "✓ 메모가 저장되었습니다." : "✗ 메모 저장 실패"
+          }).catch(err => console.error('알림 메시지 표시 실패:', err));
+        } catch (error) {
+          chrome.tabs.sendMessage(sender.tab.id, {
+            action: "show_error",
+            text: "메모 저장 중 오류 발생"
           }).catch(err => console.error('에러 메시지 표시 실패:', err));
         }
         break;

@@ -56,6 +56,12 @@
         "default": "Alt+Shift+T"
       },
       "description": "Translate selected text"
+    },
+    "save-memo": {
+      "suggested_key": {
+        "default": "Alt+Shift+S"
+      },
+      "description": "Save selected text as memo"
     }
   },
   "web_accessible_resources": [
