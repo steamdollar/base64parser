@@ -124,6 +124,24 @@ async function ensureContentScript(tabId) {
   }
 }
 
+// 현재 탭을 지정한 위치(1-based)로 이동
+async function moveTabToPosition(tab, position, retries = 5) {
+  try {
+    const tabs = await chrome.tabs.query({ windowId: tab.windowId });
+    if (tabs.length === 0) return;
+
+    const targetIndex = Math.min(position - 1, tabs.length - 1);
+    await chrome.tabs.move(tab.id, { index: targetIndex });
+  } catch (error) {
+    if (retries > 0 && error?.message?.includes('Tabs cannot be edited right now')) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+      return moveTabToPosition(tab, position, retries - 1);
+    }
+
+    console.error(`탭 ${position}번째 위치 이동 실패:`, error);
+  }
+}
+
 // 단축키 명령어 리스너
 chrome.commands.onCommand.addListener(async (command) => {
   const result = await getSync(['isEnabled']);
@@ -131,6 +149,12 @@ chrome.commands.onCommand.addListener(async (command) => {
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab) return;
+
+  const moveTabMatch = command.match(/^move-tab-to-([1-9])$/);
+  if (moveTabMatch) {
+    await moveTabToPosition(tab, Number(moveTabMatch[1]));
+    return;
+  }
 
   const ready = await ensureContentScript(tab.id);
   if (!ready) return;
